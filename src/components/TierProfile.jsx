@@ -6,11 +6,18 @@ import {
   checkAchievements, loadUnlockedAchievements, workoutXP,
 } from "../utils/theme";
 import { computeStreak } from "../utils/helpers";
-import { getExerciseById, EXERCISE_DB } from "../utils/exerciseDatabase";
+import { getExerciseById, EXERCISE_DB, MUSCLE_INFO } from "../utils/exerciseDatabase";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
 } from "recharts";
+import MuscleDiagram from "./MuscleDiagram";
+import MuscleRankView from "./MuscleRankView";
+import InteractiveMuscleBody from "./InteractiveMuscleBody";
+import {
+  loadMuscleXP, RANK_SVG_COLORS, buildRankColorMap,
+  getStrongestWeakest, analyzeWeakPoints, getMuscleStats,
+} from "../utils/muscleRankSystem";
 
 // ── Achievement categories ─────────────────────────────────
 const ACH_CATS = [
@@ -250,10 +257,21 @@ function StatCard({ icon, val, label, sub, color }) {
   );
 }
 
-export default function TierProfile({ savedData, accent = { hue: 245, sat: 72 }, lang = "sr", onBack, onShareOpen }) {
+export default function TierProfile({ savedData, accent = { hue: 245, sat: 72 }, lang = "sr", onBack, onShareOpen, rankUpMuscleIds = [] }) {
   const [achCatFilter, setAchCatFilter] = useState("all");
   const [showLockedAch, setShowLockedAch] = useState(false);
   const [selectedTier, setSelectedTier]   = useState(null);
+  const [profileTab, setProfileTab]       = useState("stats"); // "stats" | "muscles"
+
+  // ── Muscle XP data ────────────────────────────────────────
+  const muscleXP     = useMemo(() => loadMuscleXP(), [savedData]);
+  const rankColorMap = useMemo(() => buildRankColorMap(muscleXP), [muscleXP]);
+  const { strongest: strongestMuscle, weakest: weakestMuscle } = useMemo(
+    () => getStrongestWeakest(muscleXP), [muscleXP]
+  );
+  const weakPoints = useMemo(() => analyzeWeakPoints(muscleXP), [muscleXP]);
+  const strongestMuscleStats = strongestMuscle ? getMuscleStats(strongestMuscle.muscleId, muscleXP) : null;
+  const weakestMuscleStats   = weakestMuscle   ? getMuscleStats(weakestMuscle.muscleId, muscleXP)   : null;
 
   const xp       = useMemo(() => calcXP(savedData, EXERCISE_DB), [savedData]);
   const tierData = useMemo(() => getTier(xp), [xp]);
@@ -474,6 +492,72 @@ export default function TierProfile({ savedData, accent = { hue: 245, sat: 72 },
         </div>
       </div>
 
+      {/* ── PROFILE TABS ── */}
+      <div style={{
+        display: "flex", gap: 8, marginBottom: 16,
+        background: "var(--surface2)",
+        borderRadius: 14, padding: 4,
+      }}>
+        {[
+          { id: "stats",   label: "📊 Stats" },
+          { id: "muscles", label: "💪 Muscle Map" },
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setProfileTab(t.id)}
+            style={{
+              flex: 1, padding: "8px 0",
+              borderRadius: 10, border: "none",
+              background: profileTab === t.id ? tierColor : "transparent",
+              color: profileTab === t.id ? "#0a0a12" : "var(--text3)",
+              fontWeight: 700, fontSize: 13,
+              cursor: "pointer",
+              transition: "all 0.2s",
+              boxShadow: profileTab === t.id ? `0 2px 12px ${tierGlow}` : "none",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+      {profileTab === "muscles" ? (
+        <motion.div
+          key="muscles"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.2 }}
+        >
+          {/* ── INTERACTIVE MUSCLE BODY — primary visual ── */}
+          <InteractiveMuscleBody
+            muscleXP={muscleXP}
+            savedData={savedData}
+            accent={accent}
+            rankUpMuscleIds={rankUpMuscleIds}
+          />
+
+          {/* ── Detailed list below body ── */}
+          <div style={{ marginTop: 16 }}>
+            <div style={{
+              fontFamily: "var(--font-display)", fontWeight: 700,
+              fontSize: 14, marginBottom: 12, color: "var(--text2)",
+            }}>
+              📋 Detaljna statistika
+            </div>
+            <MuscleRankView muscleXP={muscleXP} accent={accent} />
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div
+          key="stats"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.2 }}
+        >
+
       {/* ── STATS GRID ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
         <StatCard
@@ -502,6 +586,77 @@ export default function TierProfile({ savedData, accent = { hue: 245, sat: 72 },
           color={tierColor}
         />
       </div>
+
+      {/* ── MUSCLE HIGHLIGHTS ── */}
+      {(strongestMuscleStats || weakPoints.length > 0) && (
+        <div style={{
+          background: "var(--surface-1)", border: "1px solid var(--border)",
+          borderRadius: "var(--radius-lg)", padding: "14px", marginBottom: 14,
+        }}>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 14, marginBottom: 12 }}>
+            💪 Muscle Rank
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: weakPoints.length ? 12 : 0 }}>
+            {strongestMuscleStats && (
+              <div style={{
+                background: "linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.04))",
+                border: "1px solid rgba(255,215,0,0.25)",
+                borderRadius: 10, padding: "8px 10px",
+              }}>
+                <div style={{ fontSize: 9, color: "var(--text4)", fontWeight: 700, letterSpacing: "0.06em" }}>
+                  💪 NAJJAČI MIŠIĆ
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#ffd700", marginTop: 3 }}>
+                  {MUSCLE_INFO[strongestMuscleStats.muscleId]?.sr || strongestMuscleStats.muscleId}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text4)" }}>
+                  {strongestMuscleStats.tier.icon} {strongestMuscleStats.tier.name}
+                </div>
+              </div>
+            )}
+            {weakestMuscleStats && weakestMuscleStats.muscleId !== strongestMuscleStats?.muscleId && (
+              <div style={{
+                background: "linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.04))",
+                border: "1px solid rgba(239,68,68,0.25)",
+                borderRadius: 10, padding: "8px 10px",
+              }}>
+                <div style={{ fontSize: 9, color: "var(--text4)", fontWeight: 700, letterSpacing: "0.06em" }}>
+                  📍 NAJSLABIJI
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#ef4444", marginTop: 3 }}>
+                  {MUSCLE_INFO[weakestMuscleStats.muscleId]?.sr || weakestMuscleStats.muscleId}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text4)" }}>
+                  {weakestMuscleStats.tier.icon} {weakestMuscleStats.tier.name}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Weak points */}
+          {weakPoints.length > 0 && (
+            <div style={{
+              background: "rgba(239,68,68,0.06)",
+              border: "1px solid rgba(239,68,68,0.2)",
+              borderRadius: 8, padding: "8px 10px",
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>
+                ⚠️ Weak Points
+              </div>
+              {weakPoints.slice(0, 2).map(wp => {
+                const mInfo = MUSCLE_INFO[wp.muscleId];
+                return (
+                  <div key={wp.muscleId} style={{ fontSize: 11, color: "var(--text3)", marginBottom: 2 }}>
+                    <strong>{mInfo?.sr || wp.muscleId}</strong>
+                    {" "}zaostaje {wp.tierGapFromMax} {wp.tierGapFromMax === 1 ? "rank" : "ranka"}
+                    {" "}— idi na Muscle Map za preporuke
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── XP HISTORY CHART ── */}
       {xpHistory.length >= 2 && (
@@ -673,6 +828,9 @@ export default function TierProfile({ savedData, accent = { hue: 245, sat: 72 },
 
       {/* Tier popup */}
       <TierPopup info={selectedTier} onClose={() => setSelectedTier(null)} lang={lang} />
+        </motion.div>
+      )}
+      </AnimatePresence>
     </motion.div>
   );
 }

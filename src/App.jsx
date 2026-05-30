@@ -28,8 +28,14 @@ import ExerciseSearch from "./components/ExerciseSearch";
 import TierCard       from "./components/TierCard";
 import TierProfile    from "./components/TierProfile";
 import ShareCard      from "./components/ShareCard";
+import {
+  loadMuscleXP, saveMuscleXP, computeMuscleXPGains,
+  applyMuscleXPGains, makeMuscleRankUpToast, migrateFromHistory,
+  loadMuscleXPVersion, resetMuscleXP, MUSCLE_SYSTEM_VERSION,
+} from "./utils/muscleRankSystem";
 import WeeklyRecap    from "./components/WeeklyRecap";
 import BicepsProgress from "./components/BicepsProgress";
+import SessionMode   from "./components/SessionMode";
 
 // ── Tabs ──────────────────────────────────────────────────
 const TABS = [
@@ -847,7 +853,9 @@ export default function App() {
     try { return localStorage.getItem("fitpulse_prev_tier") || "bronze"; } catch { return "bronze"; }
   });
   const [newAchievements, setNewAchievements]  = useState([]);
+  const [rankUpMuscleIds, setRankUpMuscleIds]  = useState([]);
   const [toastQueue,      setToastQueue]        = useState([]);
+  const [sessionMode,    setSessionMode]      = useState(false);
 
   useEffect(() => { saveData(savedData); }, [savedData]);
   useEffect(() => { applyAccent(accent.hue, accent.sat); }, [accent]);
@@ -855,6 +863,33 @@ export default function App() {
     document.documentElement.classList.toggle("light", !isDark);
     saveTheme(isDark ? "dark" : "light");
   }, [isDark]);
+
+  // ── Muscle XP migration — version-aware, runs on every system upgrade ──
+  // v3: forces full recalc from history with correct DR curve.
+  // Any stored version < MUSCLE_SYSTEM_VERSION triggers automatic migration.
+  useEffect(() => {
+    try {
+      const storedVersion = loadMuscleXPVersion();
+      const needsMigration = storedVersion < MUSCLE_SYSTEM_VERSION;
+
+      if (needsMigration && savedData.length > 0) {
+        // Full recalc: wipe old data, replay history with current DR
+        console.info(
+          `[MuscleXP] Migrating v${storedVersion} → v${MUSCLE_SYSTEM_VERSION}`,
+          `(${savedData.length} workouts)`
+        );
+        resetMuscleXP();
+        const migrated = migrateFromHistory(savedData);
+        saveMuscleXP(migrated); // also writes new version key
+      } else if (needsMigration && savedData.length === 0) {
+        // No history yet — just stamp the version so we don't re-run
+        try { localStorage.setItem("fitpulse_muscle_xp_version", String(MUSCLE_SYSTEM_VERSION)); } catch {}
+      }
+    } catch (e) {
+      console.warn("Muscle XP migration error:", e);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setAccent = useCallback((hue, sat) => {
     setAccentState({ hue, sat }); saveAccent(hue, sat);
@@ -886,11 +921,14 @@ export default function App() {
       if (prev.find(e => e.id === ex.id)) return prev;
       return [...prev, { id: ex.id, name: lang === "sr" ? ex.sr : ex.en }];
     });
-    setInputs(prev => ({ ...prev, [ex.id]: "" }));
+    // Smart prefill: load last session's sets
+    const lastWorkout = savedData.find(w => w.exercises[ex.id]?.raw);
+    const prefill = lastWorkout?.exercises[ex.id]?.raw || "";
+    setInputs(prev => ({ ...prev, [ex.id]: prefill }));
     setShowSearch(false); haptic([10, 5, 10]);
     const updated = [ex.id, ...recentIds.filter(id => id !== ex.id)].slice(0, 10);
     setRecentIds(updated); saveRecentExercises(updated);
-  }, [lang, recentIds]);
+  }, [lang, recentIds, savedData]);
 
   const removeExercise = useCallback((exId) => {
     setActiveExercises(prev => prev.filter(e => e.id !== exId));
@@ -900,9 +938,16 @@ export default function App() {
 
   const setInput = useCallback((exId, val) => setInputs(prev => ({ ...prev, [exId]: val })), []);
 
-  const saveWorkout = () => {
+  // ── Smart prefill: get last sets for an exercise ──────────
+  const getSmartPrefill = useCallback((exId) => {
+    const lastWorkout = savedData.find(w => w.exercises[exId]?.raw);
+    if (!lastWorkout) return "";
+    return lastWorkout.exercises[exId]?.raw || "";
+  }, [savedData]);
+
+  const saveWorkout = (sessionInfo = null) => {
     const anyInput = activeExercises.some(e => inputs[e.id]?.trim());
-    if (!anyInput) return;
+    if (!anyInput) return null;
     haptic([20, 10, 30]);
     const exercises = {};
     activeExercises.forEach(e => {
@@ -913,12 +958,13 @@ export default function App() {
         sets: parseNums(inputs[e.id] || "").length,
       };
     });
-    const workout = { id: Date.now(), date, exercises };
+    const workout = {
+      id: Date.now(), date, exercises,
+      ...(sessionInfo ? { startTime: sessionInfo.startTime, endTime: sessionInfo.endTime } : {}),
+    };
     const newPRs  = detectNewPRs(workout, savedData);
     const nextData = [workout, ...savedData];
     setSavedData(nextData);
-    // Track XP history
-    // XP with PR bonus
     const rawWXP = workoutXP(workout, EXERCISE_DB);
     const finalWXP = applyPRBonus(rawWXP, newPRs.length > 0);
     try { appendXPHistory(finalWXP); } catch {}
@@ -929,14 +975,41 @@ export default function App() {
     const unlocked = checkAchievements(nextData, streakNow);
     const prevSet = new Set(loadUnlockedAchievements());
     const fresh = unlocked.filter(id => !prevSet.has(id));
+    const freshAchievements = [];
     if (fresh.length) {
       saveUnlockedAchievements(unlocked);
       fresh.forEach(id => {
         const a = ACHIEVEMENTS.find(x => x.id === id);
-        if (a) pushToast(makeAchievementToast(a, accent));
+        if (a) { pushToast(makeAchievementToast(a, accent)); freshAchievements.push(a); }
       });
     }
     if (newPRs.length) setTimeout(() => setPRs(newPRs), 600);
+
+    // ── Muscle XP ────────────────────────────────────────────
+    let muscleXPGains = {}, sessionRankUps = [];
+    try {
+      const currentMuscleXP = loadMuscleXP();
+      const gains = computeMuscleXPGains(workout);
+      muscleXPGains = gains;
+      const { newMuscleXP, rankUps } = applyMuscleXPGains(gains, currentMuscleXP);
+      sessionRankUps = rankUps;
+      saveMuscleXP(newMuscleXP);
+      if (rankUps.length) {
+        const ids = rankUps.map(ru => ru.muscleId);
+        setRankUpMuscleIds(ids);
+        setTimeout(() => setRankUpMuscleIds([]), 2500);
+        rankUps.forEach((ru, i) => {
+          setTimeout(() => {
+            pushToast(makeMuscleRankUpToast(ru.muscleId, ru.newRank, accent));
+          }, 800 + i * 600);
+        });
+      }
+    } catch (e) {
+      console.warn("Muscle XP error:", e);
+    }
+
+    // Return summary data for SessionMode
+    return { workout, newPRs, newAchievements: freshAchievements, muscleXPGains, rankUps: sessionRankUps };
   };
 
   const deleteWorkout = useCallback((id) => {
@@ -1169,39 +1242,65 @@ export default function App() {
                     {lang === "sr" ? "Dodaj vežbu" : "Add exercise"}
                   </motion.button>
 
-                  {/* Save button */}
-                  <motion.button
-                    whileTap={{ scale: hasAnyInput ? 0.97 : 1 }}
-                    onClick={saveWorkout}
-                    disabled={!hasAnyInput}
-                    className={saveFlash ? "glow-save" : ""}
-                    style={{
-                      width: "100%",
-                      marginBottom: 8,
-                      padding: "17px",
-                      background: hasAnyInput ? `linear-gradient(135deg, ${acD}, ${hsl(hue,sat,64)})` : "var(--surface-2)",
-                      border: "none",
-                      borderRadius: "var(--radius-lg)",
-                      color: hasAnyInput ? "#fff" : "var(--text4)",
-                      fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 700,
-                      cursor: hasAnyInput ? "pointer" : "not-allowed",
-                      boxShadow: hasAnyInput ? `0 5px 24px ${acGlow}` : "none",
-                      transition: "all var(--dur-normal) var(--ease-out)",
-                      letterSpacing: 0.2,
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                    }}
-                  >
-                    {lang === "sr" ? "Sačuvaj trening" : "Save workout"}
-                    {hasAnyInput && (
-                      <motion.i
-                        className="ti ti-check"
-                        aria-hidden="true"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        style={{ fontSize: 18 }}
-                      />
-                    )}
-                  </motion.button>
+                  {/* Buttons row */}
+                  <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+                    {/* SESSION MODE button */}
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        if (activeExercises.length === 0) { setShowSearch(true); return; }
+                        setSessionMode(true); haptic([15, 10, 20]);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: "17px",
+                        background: hsl(hue, sat, 60, 0.12),
+                        border: `1.5px solid ${acBd}`,
+                        borderRadius: "var(--radius-lg)",
+                        color: acL,
+                        fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        transition: "all var(--dur-normal)",
+                      }}
+                    >
+                      <i className="ti ti-player-play-filled" style={{ fontSize: 16 }} aria-hidden="true" />
+                      Session
+                    </motion.button>
+
+                    {/* Save button */}
+                    <motion.button
+                      whileTap={{ scale: hasAnyInput ? 0.97 : 1 }}
+                      onClick={() => saveWorkout()}
+                      disabled={!hasAnyInput}
+                      className={saveFlash ? "glow-save" : ""}
+                      style={{
+                        flex: 2,
+                        padding: "17px",
+                        background: hasAnyInput ? `linear-gradient(135deg, ${acD}, ${hsl(hue,sat,64)})` : "var(--surface-2)",
+                        border: "none",
+                        borderRadius: "var(--radius-lg)",
+                        color: hasAnyInput ? "#fff" : "var(--text4)",
+                        fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 700,
+                        cursor: hasAnyInput ? "pointer" : "not-allowed",
+                        boxShadow: hasAnyInput ? `0 5px 24px ${acGlow}` : "none",
+                        transition: "all var(--dur-normal) var(--ease-out)",
+                        letterSpacing: 0.2,
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                      }}
+                    >
+                      {lang === "sr" ? "Sačuvaj" : "Save"}
+                      {hasAnyInput && (
+                        <motion.i
+                          className="ti ti-check"
+                          aria-hidden="true"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          style={{ fontSize: 18 }}
+                        />
+                      )}
+                    </motion.button>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -1353,6 +1452,7 @@ export default function App() {
                   accent={accent}
                   lang={lang}
                   onShareOpen={() => setShowShareCard(true)}
+                  rankUpMuscleIds={rankUpMuscleIds}
                 />
               </motion.div>
             )}
@@ -1442,6 +1542,25 @@ export default function App() {
               onSelect={addExercise}
               onClose={() => setShowSearch(false)}
               accent={accent}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* SESSION MODE */}
+        <AnimatePresence>
+          {sessionMode && (
+            <SessionMode
+              exercises={activeExercises}
+              inputs={inputs}
+              onChange={setInput}
+              onRemove={removeExercise}
+              getPR={getPR}
+              onSave={(sessionInfo) => saveWorkout(sessionInfo)}
+              onClose={() => setSessionMode(false)}
+              onAddExercise={() => { setShowSearch(true); }}
+              accent={accent}
+              lang={lang}
+              savedData={savedData}
             />
           )}
         </AnimatePresence>
