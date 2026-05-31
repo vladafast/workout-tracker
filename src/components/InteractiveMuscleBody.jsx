@@ -6,7 +6,7 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TIERS, getTier } from "../utils/theme";
-import { MUSCLE_INFO } from "../utils/exerciseDatabase";
+import { MUSCLE_INFO, EXERCISE_DB } from "../utils/exerciseDatabase";
 import {
   RANK_SVG_COLORS, UNTRAINED_COLOR, buildRankColorMap,
   getStrongestWeakest, analyzeWeakPoints,
@@ -15,6 +15,20 @@ import {
 
 // ── SVG group → clickable label mapping ──────────────────────
 const ALL_SVG_GROUPS = Object.keys(SVG_GROUP_TO_MUSCLES);
+
+// ── Preporučene vežbe za kliknuti mišić ──────────────────────
+// Primary target vežbe prikazane prve, zatim secondary, max 5
+function getRecommendedExercises(muscleIds, max = 5) {
+  const primary = [];
+  const secondary = [];
+  EXERCISE_DB.forEach(ex => {
+    const isPrimary = (ex.muscles?.primary || []).some(m => muscleIds.includes(m));
+    const isSecondary = !isPrimary && (ex.muscles?.secondary || []).some(m => muscleIds.includes(m));
+    if (isPrimary) primary.push({ ex, isPrimary: true });
+    else if (isSecondary) secondary.push({ ex, isPrimary: false });
+  });
+  return [...primary, ...secondary].slice(0, max);
+}
 
 // ── Rank badge (circle with tier icon) ───────────────────────
 function RankBadge({ tier, size = 32, glow = true }) {
@@ -57,7 +71,10 @@ function XPBar({ progress, color, height = 6, animate = true }) {
 // ── Detail Panel — Bottom sheet on mobile, inline on larger ──
 function MuscleDetailPanel({ stats, onClose, isMobile }) {
   const { color, tier, nextTier, label, xp, progress, remaining,
-          workoutCount, lastTrainedAt, isStrongest, isWeakest } = stats;
+          workoutCount, lastTrainedAt, isStrongest, isWeakest, svgGroupId } = stats;
+
+  const muscleIds = SVG_GROUP_TO_MUSCLES[svgGroupId] || [];
+  const recommendations = useMemo(() => getRecommendedExercises(muscleIds), [svgGroupId]); // eslint-disable-line
 
   const dateStr = lastTrainedAt
     ? new Date(lastTrainedAt + "T12:00:00").toLocaleDateString("sr-RS", { day: "numeric", month: "short", year: "numeric" })
@@ -190,6 +207,54 @@ function MuscleDetailPanel({ stats, onClose, isMobile }) {
           </div>
         </div>
       )}
+
+      {/* ── Preporučene vežbe ── */}
+      {recommendations.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{
+            fontSize: 10, color: "var(--text4)", fontWeight: 700,
+            letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8,
+          }}>
+            🏋️ Preporučene vežbe
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {recommendations.map(({ ex, isPrimary }) => (
+              <div key={ex.id} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "9px 12px",
+                background: isPrimary ? `${color}12` : "var(--surface2)",
+                border: `1px solid ${isPrimary ? color + "2a" : "rgba(255,255,255,0.07)"}`,
+                borderRadius: 10,
+              }}>
+                <div style={{
+                  width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                  background: isPrimary ? color : "rgba(255,255,255,0.25)",
+                  boxShadow: isPrimary ? `0 0 6px ${color}99` : "none",
+                }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 13, fontWeight: 700,
+                    color: isPrimary ? "var(--text)" : "var(--text3)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {ex.sr || ex.en}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 9, fontWeight: 800, letterSpacing: "0.05em",
+                  color: isPrimary ? color : "var(--text4)",
+                  background: isPrimary ? `${color}18` : "rgba(255,255,255,0.05)",
+                  border: `1px solid ${isPrimary ? color + "30" : "rgba(255,255,255,0.09)"}`,
+                  borderRadius: 5, padding: "2px 6px",
+                  textTransform: "uppercase", flexShrink: 0,
+                }}>
+                  {isPrimary ? "Primary" : "Secondary"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -203,13 +268,15 @@ function MuscleDetailPanel({ stats, onClose, isMobile }) {
         transition={{ type: "spring", stiffness: 380, damping: 38 }}
         style={{
           position: "fixed", bottom: 0, left: 0, right: 0,
-          zIndex: 600,
-          background: "var(--surface1)",
+          zIndex: 1000,
+          background: "var(--surface1, #111827)",
+          opacity: 1,
+          backdropFilter: "none",
           borderRadius: "20px 20px 0 0",
           padding: "0 20px 40px",
           maxHeight: "85vh",
           overflowY: "auto",
-          boxShadow: `0 -8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06)`,
+          boxShadow: `0 -8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08)`,
         }}
       >
         {/* Drag handle */}
@@ -245,11 +312,14 @@ function MuscleDetailPanel({ stats, onClose, isMobile }) {
       exit={{ opacity: 0, y: -8, scale: 0.97 }}
       transition={{ type: "spring", stiffness: 400, damping: 28 }}
       style={{
-        background: "var(--surface1)",
+        background: "var(--surface1, #111827)",
         border: `1px solid ${color}44`,
         borderRadius: 18, padding: "18px 20px",
-        boxShadow: `0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05), 0 0 40px ${color}18`,
+        boxShadow: `0 20px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.07), 0 0 40px ${color}18`,
         position: "relative",
+        opacity: 1,
+        backdropFilter: "none",
+        zIndex: 1000,
       }}
     >
       <button
@@ -457,7 +527,7 @@ export default function InteractiveMuscleBody({ muscleXP = {}, savedData = [], a
                   exit={{ opacity: 0 }}
                   onClick={() => setSelectedGroup(null)}
                   style={{
-                    position: "fixed", inset: 0, zIndex: 599,
+                    position: "fixed", inset: 0, zIndex: 999,
                     background: "rgba(0,0,0,0.55)",
                   }}
                 />

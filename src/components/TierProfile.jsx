@@ -784,7 +784,7 @@ export default function TierProfile({ savedData, accent = { hue: 245, sat: 72 },
             {showLockedAch ? "Nema dostignuća u ovoj kategoriji" : "Nema otključanih dostignuća ovde"}
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }} className="achievements-grid">
             <AnimatePresence>
               {filteredAch.map((a, i) => {
                 const unlocked = unlockedSet.has(a.id);

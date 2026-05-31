@@ -661,3 +661,15 @@ input, button, select, textarea { font-family: var(--font-body); }
   padding-bottom: var(--space-2);
 }
 .scroll-x > * { scroll-snap-align: start; }
+
+/* ═══════════════════════════════════════════════
+   ACHIEVEMENTS — RESPONSIVE MOBILE LAYOUT
+   ═══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .achievements-grid {
+    grid-template-columns: 1fr;
+  }
+  .achievement-card {
+    width: 100%;
+  }
+}

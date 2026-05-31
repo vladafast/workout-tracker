@@ -856,6 +856,48 @@ export default function App() {
   const [rankUpMuscleIds, setRankUpMuscleIds]  = useState([]);
   const [toastQueue,      setToastQueue]        = useState([]);
   const [sessionMode,    setSessionMode]      = useState(false);
+  const [showDraftBanner, setShowDraftBanner]  = useState(false);
+
+  // ── Auto-save draft ───────────────────────────────────────
+  const DRAFT_KEY = "fitpulse_current_workout_draft";
+  const draftTimerRef = useRef(null);
+
+  const saveDraft = useCallback((exercises, inpts, dt) => {
+    // Ne čuvaj potpuno prazne vežbe
+    const hasData = exercises.some(e => inpts[e.id]?.trim());
+    if (!hasData) {
+      try { localStorage.removeItem(DRAFT_KEY); } catch {}
+      return;
+    }
+    const draft = { exercises, inputs: inpts, date: dt, savedAt: Date.now() };
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch {}
+  }, []);
+
+  const clearDraft = useCallback(() => {
+    try { localStorage.removeItem(DRAFT_KEY); } catch {}
+  }, []);
+
+  const loadDraft = useCallback(() => {
+    try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch { return null; }
+  }, []);
+
+  // Proveri draft pri mount-u
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft && draft.exercises?.length > 0) {
+      setShowDraftBanner(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save sa debounce 400ms
+  useEffect(() => {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      saveDraft(activeExercises, inputs, date);
+    }, 400);
+    return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current); };
+  }, [activeExercises, inputs, date, saveDraft]);
 
   useEffect(() => { saveData(savedData); }, [savedData]);
   useEffect(() => { applyAccent(accent.hue, accent.sat); }, [accent]);
@@ -921,14 +963,15 @@ export default function App() {
       if (prev.find(e => e.id === ex.id)) return prev;
       return [...prev, { id: ex.id, name: lang === "sr" ? ex.sr : ex.en }];
     });
-    // Smart prefill: load last session's sets
-    const lastWorkout = savedData.find(w => w.exercises[ex.id]?.raw);
-    const prefill = lastWorkout?.exercises[ex.id]?.raw || "";
-    setInputs(prev => ({ ...prev, [ex.id]: prefill }));
+    setInputs(prev => {
+      if (prev[ex.id] !== undefined) return prev; // vežba već postoji u sesiji, ne diraj
+      return { ...prev, [ex.id]: "" }; // nova vežba — uvek počinje prazna
+    });
+    setShowDraftBanner(false);
     setShowSearch(false); haptic([10, 5, 10]);
     const updated = [ex.id, ...recentIds.filter(id => id !== ex.id)].slice(0, 10);
     setRecentIds(updated); saveRecentExercises(updated);
-  }, [lang, recentIds, savedData]);
+  }, [lang, recentIds]);
 
   const removeExercise = useCallback((exId) => {
     setActiveExercises(prev => prev.filter(e => e.id !== exId));
@@ -969,6 +1012,7 @@ export default function App() {
     const finalWXP = applyPRBonus(rawWXP, newPRs.length > 0);
     try { appendXPHistory(finalWXP); } catch {}
     setInputs(Object.fromEntries(activeExercises.map(e => [e.id, ""])));
+    clearDraft();
     setSaveFlash(true); setTimeout(() => setSaveFlash(false), 900);
     pushToast(makeSaveToast(workout, accent, lang));
     const streakNow = computeStreak(nextData).current;
@@ -1178,6 +1222,75 @@ export default function App() {
                 <div style={{ padding: "10px 16px 8px" }}>
                   <StreakBanner savedData={savedData} accent={accent} />
                   <WeeklyRecap savedData={savedData} accent={accent} lang={lang} />
+
+                  {/* ── Draft banner ── */}
+                  {showDraftBanner && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      style={{
+                        background: hsl(hue, sat, 60, 0.1),
+                        border: `1.5px solid ${acBd}`,
+                        borderRadius: "var(--radius-lg)",
+                        padding: "14px 16px",
+                        marginBottom: 14,
+                        display: "flex", flexDirection: "column", gap: 10,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 22 }}>📋</span>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>
+                            {lang === "sr" ? "Imaš nedovršen trening. Nastavi?" : "You have an unfinished workout. Continue?"}
+                          </div>
+                          <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>
+                            {lang === "sr" ? "Sačuvani podaci iz prethodne sesije" : "Data saved from previous session"}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <motion.button
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => {
+                            const draft = loadDraft();
+                            if (draft) {
+                              setActiveExercises(draft.exercises || []);
+                              setInputs(draft.inputs || {});
+                              setDate(draft.date || todayStr());
+                            }
+                            setShowDraftBanner(false);
+                          }}
+                          style={{
+                            flex: 2, padding: "11px",
+                            borderRadius: "var(--radius-sm)",
+                            background: `linear-gradient(135deg, ${acD}, ${hsl(hue, sat, 64)})`,
+                            border: "none", color: "#fff",
+                            fontWeight: 700, fontSize: 13, cursor: "pointer",
+                          }}
+                        >
+                          {lang === "sr" ? "Nastavi trening" : "Resume workout"}
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => {
+                            clearDraft();
+                            setShowDraftBanner(false);
+                          }}
+                          style={{
+                            flex: 1, padding: "11px",
+                            borderRadius: "var(--radius-sm)",
+                            background: "var(--surface-2)",
+                            border: "1px solid var(--border)",
+                            color: "var(--text3)",
+                            fontWeight: 600, fontSize: 13, cursor: "pointer",
+                          }}
+                        >
+                          {lang === "sr" ? "Obriši draft" : "Discard"}
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )}
 
                   {/* Date picker */}
                   <div style={{ marginBottom: 16 }}>
