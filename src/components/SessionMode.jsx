@@ -553,6 +553,11 @@ export function SessionSummary({ workout, savedData, accent, lang, onClose, newP
 
   const totalReps = Object.values(workout.exercises).reduce((s, v) => s + (v?.total || 0), 0);
   const xpGained = workoutXP(workout, EXERCISE_DB);
+  // Determine if any exercise in this workout is a hold (seconds) type
+  const hasOnlyHolds = Object.keys(workout.exercises).length > 0 &&
+    Object.keys(workout.exercises).every(id => EXERCISE_DB.find(e => e.id === id)?.isHold);
+  const hasMixedTypes = !hasOnlyHolds && Object.keys(workout.exercises)
+    .some(id => EXERCISE_DB.find(e => e.id === id)?.isHold);
   const xpWithBonus = applyPRBonus(xpGained, newPRs.length > 0);
   const currentXP = calcXP(savedData, EXERCISE_DB);
   const tierInfo = getTier(currentXP);
@@ -575,16 +580,6 @@ export function SessionSummary({ workout, savedData, accent, lang, onClose, newP
     setConfettiPieces(pieces);
   }, []);
 
-  // Muscle XP breakdown
-  const muscleGroups = {};
-  Object.entries(muscleXPGains).forEach(([mId, xp]) => {
-    if (xp > 0) {
-      const info = EXERCISE_DB.find(e => e.muscles?.primary?.includes(mId));
-      const group = "Mišići";
-      if (!muscleGroups[mId]) muscleGroups[mId] = 0;
-      muscleGroups[mId] += xp;
-    }
-  });
 
   return (
     <motion.div
@@ -691,7 +686,7 @@ export function SessionSummary({ workout, savedData, accent, lang, onClose, newP
           gap: 8, marginBottom: 20,
         }}>
           {[
-            { val: totalReps, label: lang === "sr" ? "Reps" : "Reps", icon: "💪" },
+            { val: totalReps, label: hasOnlyHolds ? (lang === "sr" ? "Sekundi" : "Seconds") : hasMixedTypes ? (lang === "sr" ? "Rep/Sek" : "Rep/Sec") : (lang === "sr" ? "Reps" : "Reps"), icon: hasOnlyHolds ? "⏱" : "💪" },
             { val: Object.keys(workout.exercises).length, label: "Vežbi", icon: "🎯" },
             { val: duration > 0 ? `${duration}m` : "—", label: "Trajanje", icon: "⏱" },
           ].map((s, i) => (
@@ -792,19 +787,19 @@ export function SessionSummary({ workout, savedData, accent, lang, onClose, newP
               🏆 Novi rekordi!
             </div>
             {newPRs.map((pr, i) => {
-              const ex = getExerciseById(pr.exId);
+              const ex = getExerciseById(pr.id);
               return (
-                <div key={pr.exId} style={{
+                <div key={pr.id} style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   padding: "8px 0", borderBottom: i < newPRs.length - 1 ? "1px solid var(--border)" : "none",
                 }}>
                   <span style={{ fontSize: 13, color: "var(--text2)" }}>
-                    {ex ? (lang === "sr" ? ex.sr : ex.en) : pr.exId}
+                    {ex ? (lang === "sr" ? ex.sr : ex.en) : pr.id}
                   </span>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 12, color: "var(--text4)" }}>{pr.old} →</span>
+                    <span style={{ fontSize: 12, color: "var(--text4)" }}>{pr.prev} →</span>
                     <span style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 800, color: acL }}>
-                      {pr.total} 🏆
+                      {pr.now} 🏆
                     </span>
                   </div>
                 </div>
@@ -925,7 +920,16 @@ export default function SessionMode({
   const acGlow = hsl(hue, sat, 62, 0.4);
 
   const [activeEx, setActiveEx] = useState(exercises[0]?.id || null);
+  const prevExCountRef = React.useRef(exercises.length);
+  useEffect(() => {
+    if (exercises.length > prevExCountRef.current) {
+      const newest = exercises[exercises.length - 1];
+      if (newest) setActiveEx(newest.id);
+    }
+    prevExCountRef.current = exercises.length;
+  }, [exercises.length]);
   const [showTimer, setShowTimer] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [startTime] = useState(Date.now());
   const [elapsed, setElapsed] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
@@ -956,6 +960,16 @@ export default function SessionMode({
     }
   }, []);
 
+  // Pokušaj izlaska — prikaži confirm ako ima podataka
+  const handleCloseRequest = () => {
+    if (hasAnyInput) {
+      setShowExitConfirm(true);
+      haptic([8]);
+    } else {
+      onClose(false); // nema podataka, sigurno izlazi
+    }
+  };
+
   const handleFinish = () => {
     if (!hasAnyInput) return;
     haptic([20, 15, 30]);
@@ -968,7 +982,7 @@ export default function SessionMode({
 
   const handleSummaryClose = () => {
     setShowSummary(false);
-    onClose();
+    onClose(false); // trening je sačuvan, brisanje je ok
   };
 
   return (
@@ -999,7 +1013,7 @@ export default function SessionMode({
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <motion.button
                 whileTap={{ scale: 0.85 }}
-                onClick={onClose}
+                onClick={handleCloseRequest}
                 style={{
                   background: "var(--surface-2)", border: "1px solid var(--border2)",
                   color: "var(--text3)", borderRadius: "var(--radius-sm)",
@@ -1183,7 +1197,7 @@ export default function SessionMode({
         {showSummary && summaryData && (
           <SessionSummary
             workout={summaryData.workout}
-            savedData={savedData}
+            savedData={summaryData.updatedSavedData || savedData}
             accent={accent}
             lang={lang}
             onClose={handleSummaryClose}
@@ -1192,6 +1206,80 @@ export default function SessionMode({
             muscleXPGains={summaryData.muscleXPGains || {}}
             rankUps={summaryData.rankUps || []}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Exit confirm overlay — štiti od slučajnog gubitka podataka */}
+      <AnimatePresence>
+        {showExitConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 900,
+              background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)",
+              display: "flex", alignItems: "flex-end", justifyContent: "center",
+              padding: "0 16px",
+            }}
+            onClick={() => setShowExitConfirm(false)}
+          >
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: "var(--surface-elevated)",
+                borderRadius: "var(--radius-xl) var(--radius-xl) 0 0",
+                padding: "28px 20px calc(28px + var(--safe-bottom))",
+                width: "100%", maxWidth: 480,
+                border: "1px solid var(--border2)",
+              }}
+            >
+              <div style={{ textAlign: "center", marginBottom: 24 }}>
+                <div style={{ fontSize: 44, marginBottom: 10 }}>⚠️</div>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 800, marginBottom: 8 }}>
+                  {lang === "sr" ? "Napustiti trening?" : "Leave workout?"}
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text3)" }}>
+                  {lang === "sr"
+                    ? "Uneseni podaci neće biti sačuvani kao trening. Draft ostaje ako se vratiš."
+                    : "Your reps won't be saved as a workout. Your draft stays if you come back."}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => { setShowExitConfirm(false); haptic([5]); }}
+                  style={{
+                    width: "100%", padding: "16px",
+                    background: `linear-gradient(135deg, ${hsl(hue,sat,42)}, ${hsl(hue,sat,64)})`,
+                    border: "none", borderRadius: "var(--radius-lg)",
+                    color: "#fff", fontFamily: "var(--font-display)",
+                    fontSize: 16, fontWeight: 800, cursor: "pointer",
+                  }}
+                >
+                  {lang === "sr" ? "Nastavi trening" : "Keep training"}
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => { setShowExitConfirm(false); onClose(true); haptic([10, 5]); }}
+                  style={{
+                    width: "100%", padding: "14px",
+                    background: "var(--danger-dim)",
+                    border: "1px solid rgba(239,68,68,0.25)",
+                    borderRadius: "var(--radius-lg)",
+                    color: "#f87171", fontFamily: "var(--font-display)",
+                    fontSize: 15, fontWeight: 700, cursor: "pointer",
+                  }}
+                >
+                  {lang === "sr" ? "Izađi, sačuvaj draft" : "Exit, keep draft"}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </>

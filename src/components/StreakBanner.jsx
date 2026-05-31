@@ -1,10 +1,8 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { computeStreak } from "../utils/helpers";
 import { hsl } from "../utils/theme";
 
-export default function StreakBanner({ savedData, accent = { hue: 245, sat: 72 } }) {
-  const { current, longest, atRisk } = computeStreak(savedData);
+export default function StreakBanner({ savedData, accent = { hue: 245, sat: 72 }, current, longest, atRisk }) {
   const { hue, sat } = accent;
 
   if (current === 0 && !atRisk) return null;

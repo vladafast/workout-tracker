@@ -5,7 +5,7 @@ import {
   TIERS, getTier, calcXP, ACHIEVEMENTS, TITANIUM_MAX_XP,
   checkAchievements, loadUnlockedAchievements, workoutXP,
 } from "../utils/theme";
-import { computeStreak } from "../utils/helpers";
+import { computeStreak, localDateStr} from "../utils/helpers";
 import { getExerciseById, EXERCISE_DB, MUSCLE_INFO } from "../utils/exerciseDatabase";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
@@ -31,8 +31,8 @@ const ACH_CATS = [
 const achCat = (id) => {
   if (["streak_3","streak_7","streak_14","streak_30","streak_60","streak_100","streak_365"].includes(id)) return "streak";
   if (["reps_100","reps_500","reps_1000","reps_5000","reps_10000","reps_50000","reps_100000","session_100","beast_mode","monster","100_pushups","50_pullups"].includes(id)) return "reps";
-  if (["first_muscleup","muscleup_10","first_handstand","free_handstand","handstand_pu","first_lsit","human_flag","planche","front_lever","back_lever","pistol_squat","dragon_flag","nordic_curl","skill_hunter","skill_master","dead_hang_1min"].includes(id)) return "skill";
-  if (["silver_tier","gold_tier","platinum_tier","diamond_tier","titanium_tier","titanium_50","titanium_max"].includes(id)) return "tier";
+  if (["first_muscleup","muscleup_10","first_handstand","free_handstand","handstand_pu","first_lsit","human_flag_ach","full_planche_ach","victorian_ach","front_lever_ach","back_lever_ach","pistol_ach","dragon_flag_ach","nordic_ach","skill_hunter","skill_master","dead_hang_ach"].includes(id)) return "skill";
+  if (["rank_silver","rank_gold","rank_platinum","rank_diamond","rank_obsidian","rank_titan","rank_titanium"].includes(id)) return "tier";
   return "other";
 };
 
@@ -47,8 +47,7 @@ function MilestoneRing({ tier, xp, size = 56, savedData, onSelect }) {
     let acc = 0;
     const sorted = [...savedData].sort((a, b) => a.date.localeCompare(b.date));
     for (const w of sorted) {
-      const wx = Object.values(w.exercises).reduce((s, v) => s + (v?.total || 0), 0);
-      acc += Math.floor(wx * 1.5) + 50; // rough estimate per workout
+      acc += workoutXP(w, EXERCISE_DB);
       if (acc >= tier.threshold) return w.date;
     }
     return null;
@@ -297,7 +296,7 @@ export default function TierProfile({ savedData, accent = { hue: 245, sat: 72 },
   }, [savedData, lang]);
 
   const consistency = useMemo(() => {
-    const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+    const cutoff = localDateStr(new Date(Date.now() - 30 * 86400000));
     const count  = savedData.filter(w => w.date >= cutoff).length;
     return Math.min(Math.round((count / 30) * 100), 100);
   }, [savedData]);

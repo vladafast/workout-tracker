@@ -36,7 +36,14 @@ export const calcAvg = (text) => {
   return (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(1);
 };
 
-export const todayStr = () => new Date().toISOString().split("T")[0];
+// ── Local date helper (avoids UTC offset bugs) ─────────────
+export const localDateStr = (d = new Date()) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+export const todayStr = () => localDateStr();
 
 export const formatDate = (dateStr) => {
   const d = new Date(dateStr + "T00:00:00");
@@ -71,7 +78,7 @@ export const computeStreak = (savedData) => {
   let d = new Date(today);
 
   for (let i = 0; i < 365; i++) {
-    const key = d.toISOString().split("T")[0];
+    const key = localDateStr(d);
     if (workoutDays.has(key)) {
       runCount++;
       missedInRow = 0;
@@ -84,7 +91,7 @@ export const computeStreak = (savedData) => {
 
   const current = runCount;
 
-  // Longest streak (allow 1-day gap = streak protection)
+  // Longest streak — allows the same 1-day gap protection as the current streak counter
   const allDays = [...workoutDays].sort();
   let run = allDays.length > 0 ? 1 : 0;
   let longest = run;
@@ -96,17 +103,17 @@ export const computeStreak = (savedData) => {
     else run = 1;
   }
 
-  const todayKey = today.toISOString().split("T")[0];
+  const todayKey = localDateStr(today);
   const yest = new Date(today);
   yest.setDate(yest.getDate() - 1);
-  const yestKey = yest.toISOString().split("T")[0];
+  const yestKey = localDateStr(yest);
   const atRisk = current > 0 && !workoutDays.has(todayKey) && workoutDays.has(yestKey);
 
   // Comeback bonus: broke a streak of 3+ but trained today after missing yesterday
   const comebackBonus = (() => {
     if (!workoutDays.has(todayKey)) return false;
     const prev2 = new Date(today); prev2.setDate(today.getDate() - 2);
-    return !workoutDays.has(yestKey) && workoutDays.has(prev2.toISOString().split("T")[0]);
+    return !workoutDays.has(yestKey) && workoutDays.has(localDateStr(prev2));
   })();
 
   return { current, longest, atRisk, comebackBonus };
@@ -119,13 +126,6 @@ export const getStreakMilestone = (streak) => {
   return STREAK_MILESTONES.find(m => streak === m) || null;
 };
 
-// ── Streak protection storage ──────────────────────────────
-export const loadStreakProtection = () => {
-  try { return JSON.parse(localStorage.getItem("fitpulse_streak_protect") || "null"); } catch { return null; }
-};
-export const saveStreakProtection = (data) => {
-  try { localStorage.setItem("fitpulse_streak_protect", JSON.stringify(data)); } catch {}
-};
 
 // ── XP History tracking ────────────────────────────────────
 export const loadXPHistory = () => {
@@ -156,7 +156,7 @@ export const getDaysInMonth = (year, month) => {
   for (let i = 0; i < startPad; i++) days.push(null);
   const total = new Date(year, month + 1, 0).getDate();
   for (let d = 1; d <= total; d++) {
-    days.push(new Date(year, month, d).toISOString().split("T")[0]);
+    days.push(localDateStr(new Date(year, month, d)));
   }
   return days;
 };
@@ -166,7 +166,7 @@ export const detectNewPRs = (newWorkout, savedData) => {
   const newPRs = [];
   Object.entries(newWorkout.exercises).forEach(([id, val]) => {
     const prevBest = savedData.reduce((best, w) => Math.max(best, w.exercises[id]?.total || 0), 0);
-    if (val.total > prevBest && prevBest > 0) newPRs.push({ id, prev: prevBest, now: val.total });
+    if (val.total > prevBest) newPRs.push({ id, prev: prevBest, now: val.total });
   });
   return newPRs;
 };
@@ -197,5 +197,8 @@ export const saveRecentExercises = (ids) => {
 
 // ── Vibration ──────────────────────────────────────────────
 export const haptic = (pattern = [10]) => {
-  try { navigator.vibrate?.(pattern); } catch {}
+  try {
+    const hapticsOn = JSON.parse(localStorage.getItem("fitpulse_haptics") ?? "true");
+    if (hapticsOn) navigator.vibrate?.(pattern);
+  } catch {}
 };

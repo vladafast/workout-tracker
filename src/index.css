@@ -76,6 +76,11 @@
   --accent-h:     245;
   --accent-s:     72%;
 
+  /* ── Indigo aliases (used in legacy components) ── */
+  --indigo:       var(--accent);
+  --indigo-light: var(--accent-light);
+  --indigo-dim:   var(--accent-dim);
+
   /* ── Semantic ── */
   --danger:       hsl(0,72%,58%);
   --danger-dim:   hsla(0,72%,58%,0.12);

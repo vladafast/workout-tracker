@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import {
   parseNums, calcTotal, calcAvg, loadData, saveData, loadLang, saveLang,
-  detectNewPRs, computeStreak, todayStr, formatDate, haptic, MOTIVATIONAL,
+  detectNewPRs, computeStreak, todayStr, localDateStr, formatDate, haptic, MOTIVATIONAL,
   loadRecentExercises, saveRecentExercises,
   appendXPHistory,
 } from "./utils/helpers";
@@ -48,21 +48,91 @@ const TABS = [
 
 // ── Exercise icon map ─────────────────────────────────────
 const EX_ICONS = {
-  sklekovi_siroki:"ti-trending-up",sklekovi_uski:"ti-arrow-bar-up",
-  sklekovi_dijamant:"ti-diamond",sklekovi_archer:"ti-arrows-horizontal",
-  sklekovi_pike:"ti-triangle",sklekovi_decline:"ti-arrow-up-right",
-  sklekovi_incline:"ti-arrow-down-right",sklekovi_jednorucan:"ti-hand-stop",
+  // Push
+  sklekovi_siroki:"ti-arrows-horizontal",sklekovi_uski:"ti-arrow-narrow-up",
+  sklekovi_dijamant:"ti-diamond",sklekovi_archer:"ti-bow-arrow",
+  sklekovi_pike:"ti-arrow-autofit-up",sklekovi_decline:"ti-arrow-bar-down",
+  sklekovi_incline:"ti-trending-up",sklekovi_jednorucan:"ti-arm-flex",
+  push_up:"ti-arrow-bar-up",knee_pushup:"ti-arrow-bar-up",
+  pseudo_planche_pushup:"ti-trending-up",explosive_pushup:"ti-bolt",
+  // Pull
   zgibovi_siroki:"ti-arrow-up",zgibovi_uski:"ti-arrow-narrow-up",
   chin_ups:"ti-arm-flex",neutral_grip_pullups:"ti-grip-horizontal",
   muscle_up:"ti-rocket",australijski_zgibovi:"ti-trending-down",
+  archer_pullup:"ti-bow-arrow",chest_to_bar:"ti-arrow-bar-up",
+  explosive_pullup:"ti-bolt",lsit_pullup:"ti-letter-l",
+  one_arm_pullup:"ti-arm-flex",one_arm_hang:"ti-anchor",
+  // Dips
   propadanja:"ti-arrow-bar-down",propadanja_stolica:"ti-chair",
-  korean_dips:"ti-arrows-down-up",dead_hang:"ti-anchor",
-  scapular_pulls:"ti-arrows-maximize",lsit:"ti-letter-l",tuck_lsit:"ti-box",
+  straight_bar_dip:"ti-arrow-bar-down",russian_dip:"ti-arrows-down-up",
+  korean_dips:"ti-arrows-down-up",
+  // Hang / scapular
+  dead_hang:"ti-anchor",scapular_pulls:"ti-arrows-maximize",
+  // Skills
   pistol_squat:"ti-run",nordic_curl:"ti-wave-square",glute_bridge:"ti-arch",
   wall_handstand:"ti-hand-finger",freestanding_handstand:"ti-star",
   handstand_pushups:"ti-arrow-autofit-up",human_flag:"ti-flag",
-  planche:"ti-zzz",front_lever:"ti-minus",back_lever:"ti-minus-vertical",
+  tuck_planche:"ti-zzz",straddle_planche:"ti-zzz",full_planche:"ti-zzz",
+  front_lever:"ti-minus",tuck_front_lever:"ti-minus",
+  back_lever:"ti-minus-vertical",back_lever_swing:"ti-minus-vertical",
   dragon_flag:"ti-flame",hollow_body:"ti-oval",ab_wheel:"ti-circle",
+  l_sit:"ti-letter-l",victorian_hold:"ti-crown",
+  skin_the_cat:"ti-rotate-clockwise",
+  // Core
+  plank:"ti-minus",side_plank:"ti-minus",
+  hanging_knee_raise:"ti-arrow-up",hanging_leg_raise:"ti-arrow-up",
+  toes_to_bar:"ti-arrow-bar-up",windshield_wipers:"ti-arrows-left-right",
+  noge_u_vis:"ti-arrow-up",situps:"ti-refresh",
+  // Legs
+  cucnjevi:"ti-run",jump_squat:"ti-arrow-up",bulgarian_split:"ti-arrow-up",
+  lunges:"ti-run",shrimp_squat:"ti-run",sissy_squat:"ti-run",
+  // Cardio / other
+  mountain_climbers:"ti-mountain",burpees:"ti-refresh",calf_raises:"ti-arrow-up",
+  // Push - new
+  incline_pushup:"ti-trending-up",decline_pushup:"ti-trending-down",hindu_pushup:"ti-wave-sine",
+  divebomber_pushup:"ti-rocket",spiderman_pushup:"ti-bug",typewriter_pushup:"ti-keyboard",
+  ring_pushup:"ti-circle",ring_archer_pushup:"ti-bow-arrow",planche_lean:"ti-arrow-autofit-right",
+  maltese_lean:"ti-plane",deep_pushup:"ti-arrow-bar-down",tiger_bend_pushup:"ti-corner-right-down",
+  ninety_degree_pushup:"ti-angle",
+  // Pull - new
+  commando_pullup:"ti-arrows-exchange",typewriter_pullup:"ti-keyboard",mixed_grip_pullup:"ti-hand-two-fingers",
+  around_the_world_pullup:"ti-globe",ice_cream_maker:"ti-rotate-clockwise",
+  front_lever_row:"ti-row-insert-top",tuck_front_lever_row:"ti-row-insert-top",adv_tuck_front_lever_row:"ti-row-insert-top",
+  inverted_row:"ti-arrow-up",ring_row:"ti-circle",archer_ring_row:"ti-bow-arrow",
+  false_grip_pullup:"ti-hand-grab",rope_climb:"ti-ladder",towel_pullup:"ti-bandage",
+  explosive_chest_slap_pullup:"ti-bolt",
+  // Dips - new
+  bench_dip_elevated:"ti-armchair",ring_dip:"ti-circle",bulgarian_ring_dip:"ti-arrows-down-up",
+  deep_ring_dip:"ti-arrow-bar-down",korean_ring_dip_elevated:"ti-arrows-down-up",
+  // Legs - new
+  cossack_squat:"ti-arrows-left-right",step_up:"ti-stairs",box_jump:"ti-box",
+  broad_jump:"ti-arrows-right",jumping_lunges:"ti-run",curtsy_lunge:"ti-bow-arrow",
+  single_leg_glute_bridge:"ti-arch",single_leg_calf_raise:"ti-arrow-up",
+  assisted_pistol_squat:"ti-run",atg_split_squat:"ti-run",wall_sit:"ti-wall",
+  reverse_nordic_curl:"ti-refresh",copenhagen_plank:"ti-minus",sl_romanian_deadlift:"ti-run",
+  // Core - new
+  reverse_crunch:"ti-refresh",v_up:"ti-chevrons-up",bicycle_crunch:"ti-bike",
+  flutter_kicks:"ti-arrow-wave-right-up",scissor_kicks:"ti-cut",russian_twist:"ti-rotate-clockwise",
+  hanging_windshield_wiper:"ti-arrows-left-right",front_lever_raise:"ti-arrow-up",
+  lsit_leg_raise:"ti-arrow-up",compression_hold:"ti-arrow-bar-to-up",
+  dead_bug:"ti-bug",bird_dog:"ti-paw-filled",hollow_rock:"ti-oval",
+  arch_hold:"ti-arch",superman_hold:"ti-star",
+  // Hold - new
+  active_hang:"ti-anchor",scapular_hang:"ti-anchor",tuck_lsit:"ti-letter-l",adv_tuck_lsit:"ti-letter-l",
+  v_sit:"ti-chevrons-up",manna_progression:"ti-star",german_hang:"ti-rotate-2",
+  ring_support_hold:"ti-circle",rto_support_hold:"ti-rotate-clockwise",
+  tuck_back_lever:"ti-minus-vertical",adv_tuck_back_lever:"ti-minus-vertical",straddle_back_lever:"ti-minus-vertical",
+  // Skill - new
+  crow_pose:"ti-bird",frog_stand:"ti-circle",elbow_lever:"ti-minus",headstand:"ti-arrow-down",
+  press_to_handstand:"ti-arrow-up",handstand_walk:"ti-walk",wall_handstand_taps:"ti-hand-finger",
+  front_lever_pull:"ti-arrow-up",front_lever_touch:"ti-hand-finger",back_lever_pull:"ti-arrow-down",
+  hefesto:"ti-rotate-clockwise",iron_cross:"ti-arrows-cross",azarian_cross:"ti-arrows-cross",
+  victorian_press:"ti-crown",planche_pushup:"ti-zzz",straddle_planche_pushup:"ti-zzz",
+  maltese_hold:"ti-plane",maltese_press:"ti-plane",
+  // Cardio - new
+  high_knees:"ti-run",jump_rope:"ti-wave-sine",star_jumps:"ti-star",tuck_jumps:"ti-jump-rope",
+  sprint:"ti-bolt",bear_crawl:"ti-paw-filled",crab_walk:"ti-arrows-left-right",
+  shuttle_run:"ti-refresh",skater_jumps:"ti-arrows-exchange",burpee_pullup:"ti-bolt",
 };
 const getIcon = id => EX_ICONS[id] || "ti-activity";
 
@@ -172,24 +242,8 @@ const EMPTY_STATS = (lang, onCta) => (
   />
 );
 
-const EMPTY_GOALS = (
-  <EmptyState
-    emoji="🎯"
-    text="Nema ciljeva"
-    sub="Postavi sebi ciljeve i prati napredak svaki dan."
-  />
-);
-
-const EMPTY_STREAK = (
-  <EmptyState
-    emoji="🔥"
-    text="Bez streaka"
-    sub="Treniraj danas i zapali svoju seriju!"
-  />
-);
-
 // ── Dashboard Hero ────────────────────────────────────────
-function DashboardHero({ savedData, accent, streak, atRisk, onAddWorkout, onTierClick }) {
+function DashboardHero({ savedData, accent, streak, atRisk, onAddWorkout, onTierClick, goals = {}, lang = "sr" }) {
   const { hue, sat } = accent;
   const xp      = calcXP(savedData, EXERCISE_DB);
   const tierFull = getTier(xp);
@@ -211,9 +265,7 @@ function DashboardHero({ savedData, accent, streak, atRisk, onAddWorkout, onTier
   const tierBg    = tierObj?.bg    || `linear-gradient(135deg, ${hsl(hue,sat,60,0.1)}, transparent)`;
 
   // Goal preview
-  const goals = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("fitpulse_goals") || "{}"); } catch { return {}; }
-  }, [savedData]);
+  // goals received as prop from App (reactive when user changes goals)
   const goalEntries = Object.entries(goals).slice(0, 1);
   const firstGoal = goalEntries[0];
   let goalProgress = 0, goalName = "", goalTarget = 0;
@@ -226,7 +278,7 @@ function DashboardHero({ savedData, accent, streak, atRisk, onAddWorkout, onTier
     const ex = getExerciseById(exId);
     goalName = ex ? ex.sr : exId;
     const cutoff = period === "daily" ? todayStr()
-      : new Date(Date.now() - (period === "weekly" ? 7 : 30) * 86400000).toISOString().split("T")[0];
+      : localDateStr(new Date(Date.now() - (period === "weekly" ? 7 : 30) * 86400000));
     const actual = savedData.filter(w => w.date >= cutoff).reduce((s, w) => s + (w.exercises[exId]?.total || 0), 0);
     goalProgress = Math.min(Math.round((actual / target) * 100), 100);
   }
@@ -310,7 +362,7 @@ function DashboardHero({ savedData, accent, streak, atRisk, onAddWorkout, onTier
               }}>
                 {tier.xp.toLocaleString()} XP
               </div>
-              <div style={{ fontSize: 10, color: "var(--text3)" }}>ukupno</div>
+              <div style={{ fontSize: 10, color: "var(--text3)" }}>{lang === "sr" ? "ukupno" : "total"}</div>
             </div>
           </div>
 
@@ -322,11 +374,11 @@ function DashboardHero({ savedData, accent, streak, atRisk, onAddWorkout, onTier
             <div style={{ flex: 1 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr 1px 1fr" }}>
                 {[
-                  { val: savedData.length, lbl: "Treninga" },
+                  { val: savedData.length, lbl: lang === "sr" ? "Treninga" : "Workouts" },
                   null,
                   { val: atRisk ? "⚠️" : `${streak}🔥`, lbl: "Streak" },
                   null,
-                  { val: prCount, lbl: "PR-ovi" },
+                  { val: prCount, lbl: lang === "sr" ? "PR-ovi" : "PRs" },
                 ].map((s, i) =>
                   s === null
                     ? <div key={i} style={{ background: "var(--border)", margin: "4px 0" }} />
@@ -393,7 +445,7 @@ function DashboardHero({ savedData, accent, streak, atRisk, onAddWorkout, onTier
                 fontSize: 10, color: "var(--text3)",
                 fontWeight: 700, textTransform: "uppercase",
                 letterSpacing: "0.08em", marginBottom: 2,
-              }}>🎯 Sledeći cilj</div>
+              }}>🎯 {lang === "sr" ? "Sledeći cilj" : "Next goal"}</div>
               <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700 }}>{goalName}</div>
             </div>
             <div style={{
@@ -415,12 +467,274 @@ function DashboardHero({ savedData, accent, streak, atRisk, onAddWorkout, onTier
   );
 }
 
+// ── Exercise Library (Više tab) ───────────────────────────
+function ExerciseLibrary({ lang, accent }) {
+  const { hue, sat } = accent;
+  const [activeCategory, setActiveCategory] = useState("sve");
+  const [activeDifficulty, setActiveDifficulty] = useState("sve_d");
+  const [search, setSearch] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
+
+  const CATEGORIES = [
+    { id: "sve",   label: { sr: "Sve",      en: "All"    }, icon: "ti-list" },
+    { id: "push",  label: { sr: "Push",     en: "Push"   }, icon: "ti-arrow-bar-up" },
+    { id: "pull",  label: { sr: "Pull",     en: "Pull"   }, icon: "ti-arrow-bar-down" },
+    { id: "dips",  label: { sr: "Dips",     en: "Dips"   }, icon: "ti-arrows-down-up" },
+    { id: "core",  label: { sr: "Core",     en: "Core"   }, icon: "ti-circle" },
+    { id: "legs",  label: { sr: "Noge",     en: "Legs"   }, icon: "ti-run" },
+    { id: "hold",  label: { sr: "Hold",     en: "Hold"   }, icon: "ti-anchor" },
+    { id: "skill",  label: { sr: "Skill",    en: "Skill"  }, icon: "ti-star"    },
+    { id: "cardio", label: { sr: "Kardio",   en: "Cardio" }, icon: "ti-run"     },
+  ];
+
+  const DIFF_RANGES = { sve_d:[0,10], lako:[1,3], srednje:[4,6], tesko:[7,10] };
+
+  const filtered = EXERCISE_DB.filter(ex => {
+    const matchCat = activeCategory === "sve" || ex.category === activeCategory;
+    const q = search.toLowerCase();
+    const matchSearch = !q || ex.sr.toLowerCase().includes(q) || ex.en.toLowerCase().includes(q);
+    const [dMin, dMax] = DIFF_RANGES[activeDifficulty] || [0,10];
+    const matchDiff = ex.difficulty >= dMin && ex.difficulty <= dMax;
+    return matchCat && matchSearch && matchDiff;
+  });
+
+  const handleCategoryChange = (catId) => {
+    setExpandedId(null);
+    setActiveCategory(catId);
+  };
+
+  const DIFF_LABELS = {
+    sr: ["", "Početnik", "Lako", "Lako+", "Srednje-", "Srednje", "Srednje+", "Teško-", "Teško", "Teško+", "Elita"],
+    en: ["", "Beginner", "Easy",  "Easy+",  "Medium-",  "Medium",  "Medium+",  "Hard-",  "Hard",  "Hard+",  "Elite"],
+  };
+
+  return (
+    <div style={{ paddingBottom: 8 }}>
+      {/* Search */}
+      <div style={{ margin: "12px 16px 0" }}>
+        <div style={{ position: "relative" }}>
+          <i className="ti ti-search" style={{
+            position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)",
+            color: "var(--text4)", fontSize: 15, pointerEvents: "none",
+          }} />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={lang === "sr" ? "Pretraži vežbe..." : "Search exercises..."}
+            className="input-field"
+            style={{ paddingLeft: 38, marginBottom: 0 }}
+          />
+        </div>
+      </div>
+
+      {/* Category pills */}
+      <div className="scroll-x" style={{ margin: "12px 0 4px", padding: "0 16px", gap: 8, display: "flex" }}>
+        {CATEGORIES.map(cat => {
+          const isOn = activeCategory === cat.id;
+          return (
+            <motion.button
+              key={cat.id}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => handleCategoryChange(cat.id)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                padding: "7px 14px", borderRadius: "var(--radius-full)",
+                border: `1px solid ${isOn ? hsl(hue,sat,62,0.5) : "var(--border)"}`,
+                background: isOn ? hsl(hue,sat,62,0.14) : "var(--surface-1)",
+                color: isOn ? hsl(hue,sat,72) : "var(--text3)",
+                fontSize: 12, fontWeight: 600, cursor: "pointer",
+                whiteSpace: "nowrap", flexShrink: 0,
+                transition: "all var(--dur-normal)",
+              }}
+            >
+              <i className={`ti ${cat.icon}`} style={{ fontSize: 13 }} />
+              {cat.label[lang]}
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* Difficulty filter */}
+      <div style={{ padding: "8px 16px 0", display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {[
+          { id: "sve_d",   label: { sr: "Sve",     en: "All"    }, min: 0,  max: 10 },
+          { id: "lako",    label: { sr: "🟢 Lako",  en: "🟢 Easy"   }, min: 1,  max: 3  },
+          { id: "srednje", label: { sr: "🟡 Srednje", en: "🟡 Medium" }, min: 4, max: 6  },
+          { id: "tesko",   label: { sr: "🔴 Teško",  en: "🔴 Hard"   }, min: 7,  max: 10 },
+        ].map(d => {
+          const isOn = activeDifficulty === d.id;
+          return (
+            <motion.button
+              key={d.id}
+              whileTap={{ scale: 0.93 }}
+              onClick={() => setActiveDifficulty(d.id)}
+              style={{
+                padding: "5px 13px", borderRadius: "var(--radius-full)",
+                border: `1px solid ${isOn ? hsl(hue,sat,62,0.5) : "var(--border)"}`,
+                background: isOn ? hsl(hue,sat,62,0.14) : "var(--surface-1)",
+                color: isOn ? hsl(hue,sat,72) : "var(--text3)",
+                fontSize: 12, fontWeight: 600, cursor: "pointer",
+                transition: "all var(--dur-normal)",
+              }}
+            >
+              {d.label[lang]}
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* Count */}
+      <div style={{ padding: "6px 16px 10px", fontSize: 11, color: "var(--text3)", fontWeight: 600 }}>
+        {filtered.length} {lang === "sr" ? "vežbi" : "exercises"}
+      </div>
+
+      {/* Exercise list */}
+      <div style={{ margin: "0 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+        {filtered.map((ex, i) => {
+          const dbIdx = EXERCISE_DB.findIndex(e => e.id === ex.id);
+          const l = EX_LIGHTNESS_ROLES[dbIdx % EX_LIGHTNESS_ROLES.length];
+          const col = hsl(hue, sat, l);
+          const colBg = hsl(hue, sat, l, 0.09);
+          const colBd = hsl(hue, sat, l, 0.22);
+          const icon = getIcon(ex.id);
+          const isExpanded = expandedId === ex.id;
+          const diffLabel = (DIFF_LABELS[lang] || DIFF_LABELS.en)[ex.difficulty] || "";
+
+          // Difficulty color
+          const diffColor = ex.difficulty <= 3 ? "#4ade80"
+            : ex.difficulty <= 5 ? "#facc15"
+            : ex.difficulty <= 7 ? "#fb923c"
+            : "#f87171";
+
+          return (
+            <div
+              key={ex.id}
+              style={{
+                background: "var(--surface-1)",
+                border: `1px solid ${isExpanded ? colBd : "var(--border)"}`,
+                borderRadius: "var(--radius-lg)",
+                overflow: "hidden",
+                transition: "border-color 0.2s",
+              }}
+            >
+              <div
+                onClick={() => setExpandedId(isExpanded ? null : ex.id)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "13px 14px", cursor: "pointer",
+                }}
+              >
+                {/* Icon */}
+                <div style={{
+                  width: 38, height: 38, borderRadius: "var(--radius-sm)",
+                  background: colBg, border: `1.5px solid ${colBd}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: col, fontSize: 17, flexShrink: 0,
+                }}>
+                  <i className={`ti ${icon}`} aria-hidden="true" />
+                </div>
+
+                {/* Name + meta */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 14, color: "var(--text)" }}>
+                    {lang === "sr" ? ex.sr : ex.en}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: diffColor,
+                      background: `${diffColor}18`, borderRadius: 4, padding: "2px 6px",
+                    }}>
+                      {Array(ex.difficulty).fill("▪").join("")} {diffLabel}
+                    </span>
+                    <span style={{ fontSize: 10, color: "var(--text4)", textTransform: "capitalize" }}>
+                      {ex.category}
+                    </span>
+                  </div>
+                </div>
+
+                {/* XP + chevron */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: col, fontFamily: "var(--font-display)" }}>
+                      {ex.xpWeight} XP
+                    </div>
+                    <div style={{ fontSize: 9, color: "var(--text4)" }}>
+                      {ex.isHold ? "/ sec" : "/ rep"}
+                    </div>
+                  </div>
+                  <motion.i
+                    className="ti ti-chevron-down"
+                    animate={{ rotate: isExpanded ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{ fontSize: 14, color: "var(--text4)" }}
+                  />
+                </div>
+              </div>
+
+              {/* Expanded content */}
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22 }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <div style={{ padding: "0 14px 14px", borderTop: `1px solid ${colBd}` }}>
+                      {/* Description */}
+                      <p style={{ fontSize: 13, color: "var(--text2)", margin: "12px 0 10px", lineHeight: 1.5 }}>
+                        {lang === "sr" ? ex.desc_sr : ex.desc_en}
+                      </p>
+
+                      {/* Muscles */}
+                      {ex.muscles && (
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: "var(--text4)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>
+                            {lang === "sr" ? "Mišići" : "Muscles"}
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                            {ex.muscles.primary?.map(m => (
+                              <span key={m} style={{
+                                background: colBg, color: col, border: `1px solid ${colBd}`,
+                                borderRadius: 5, padding: "3px 9px", fontSize: 11, fontWeight: 600,
+                              }}>
+                                ● {MUSCLE_INFO[m]?.[lang === "sr" ? "sr" : "en"] || m}
+                              </span>
+                            ))}
+                            {ex.muscles.secondary?.map(m => (
+                              <span key={m} style={{
+                                background: "var(--surface-2)", color: "var(--text3)",
+                                border: "1px solid var(--border)",
+                                borderRadius: 5, padding: "3px 9px", fontSize: 11,
+                              }}>
+                                {MUSCLE_INFO[m]?.[lang === "sr" ? "sr" : "en"] || m}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Settings Tab ──────────────────────────────────────────
-function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, savedData }) {
+function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, savedData, goals, setGoals }) {
   const { hue, sat } = accent;
   const acL  = hsl(hue, sat, 72);
   const acBg = hsl(hue, sat, 62, 0.12);
   const acBd = hsl(hue, sat, 62, 0.28);
+
+  const [moreTab, setMoreTab] = useState("podesavanja");
 
   const [sound,   setSound]   = useState(() => { try { return JSON.parse(localStorage.getItem("fitpulse_sound") ?? "true"); } catch { return true; } });
   const [haptics, setHaptics] = useState(() => { try { return JSON.parse(localStorage.getItem("fitpulse_haptics") ?? "true"); } catch { return true; } });
@@ -467,6 +781,44 @@ function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, save
 
   return (
     <div style={{ paddingBottom: 24 }}>
+      {/* ── TAB SWITCHER ── */}
+      <div style={{ margin: "12px 16px 0", display: "flex", gap: 8 }}>
+        {[
+          { id: "podesavanja", label: { sr: "Podešavanja", en: "Settings" }, icon: "ti-settings" },
+          { id: "vezbe",       label: { sr: "Vežbe",       en: "Exercises" }, icon: "ti-barbell"  },
+        ].map(t => {
+          const isOn = moreTab === t.id;
+          return (
+            <motion.button
+              key={t.id}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setMoreTab(t.id)}
+              style={{
+                flex: 1, padding: "12px 8px",
+                borderRadius: "var(--radius-md)",
+                border: `1px solid ${isOn ? acBd : "var(--border)"}`,
+                background: isOn ? acBg : "var(--surface-1)",
+                color: isOn ? acL : "var(--text3)",
+                fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 700,
+                cursor: "pointer", display: "flex", alignItems: "center",
+                justifyContent: "center", gap: 7,
+                transition: "all var(--dur-normal)",
+              }}
+            >
+              <i className={`ti ${t.icon}`} style={{ fontSize: 15 }} />
+              {t.label[lang]}
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* ── VEZBE TAB ── */}
+      {moreTab === "vezbe" && (
+        <ExerciseLibrary lang={lang} accent={accent} />
+      )}
+
+      {/* ── PODESAVANJA TAB ── */}
+      {moreTab === "podesavanja" && (<>
       {/* Profile card */}
       <div style={{ margin: "12px 16px 0", position: "relative", overflow: "hidden", background: "var(--surface-1)", border: `1px solid ${acBd}`, borderRadius: "var(--radius-lg)", padding: "20px" }}>
         <div style={{ position: "absolute", top: -50, right: -50, width: 140, height: 140, background: hsl(hue,sat,62,0.15), borderRadius: "50%", filter: "blur(40px)" }} />
@@ -482,7 +834,7 @@ function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, save
       </div>
 
       {/* IZGLED */}
-      <div className="section-label">Izgled</div>
+      <div className="section-label">{lang === "sr" ? "Izgled" : "Appearance"}</div>
       <div style={{ margin: "0 16px", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
         {/* Accent */}
         <div style={{ padding: "15px 16px", borderBottom: "1px solid var(--border)" }}>
@@ -491,8 +843,8 @@ function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, save
               <i className="ti ti-palette" aria-hidden="true" />
             </div>
             <div>
-              <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700 }}>Accent boja</div>
-              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 1 }}>Menja sve boje u app-u</div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700 }}>{lang === "sr" ? "Accent boja" : "Accent color"}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 1 }}>{lang === "sr" ? "Menja sve boje u app-u" : "Changes all colors in the app"}</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
@@ -524,8 +876,8 @@ function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, save
               <i className={`ti ${isDark ? "ti-moon" : "ti-sun"}`} aria-hidden="true" />
             </div>
             <div>
-              <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700 }}>Tema</div>
-              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 1 }}>{isDark ? "Dark mode" : "Light mode"}</div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700 }}>{lang === "sr" ? "Tema" : "Theme"}</div>
+              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 1 }}>{isDark ? (lang === "sr" ? "Tamni mod" : "Dark mode") : (lang === "sr" ? "Svetli mod" : "Light mode")}</div>
             </div>
           </div>
           <Toggle on={isDark} onToggle={() => setIsDark(d => !d)} />
@@ -536,19 +888,19 @@ function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, save
       <div className="section-label">Feedback</div>
       <div style={{ margin: "0 16px", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
         <SettingRow
-          icon="ti-volume" title="Zvuk" desc="Dopamine zvuk pri čuvanju"
+          icon="ti-volume" title={lang === "sr" ? "Zvuk" : "Sound"} desc={lang === "sr" ? "Zvučni efekti (nije implementirano)" : "Sound effects (not implemented)"}
           right={<Toggle on={sound} onToggle={() => { const v = !sound; setSound(v); localStorage.setItem("fitpulse_sound", v); }} />}
         />
         <div style={{ borderBottom: "none" }}>
           <SettingRow
-            icon="ti-wave-sine" title="Haptics" desc="Vibracija pri akcijama"
+            icon="ti-wave-sine" title="Haptics" desc={lang === "sr" ? "Vibracija pri akcijama" : "Vibration on actions"}
             right={<Toggle on={haptics} onToggle={() => { const v = !haptics; setHaptics(v); localStorage.setItem("fitpulse_haptics", v); }} />}
           />
         </div>
       </div>
 
       {/* JEZIK */}
-      <div className="section-label">Jezik</div>
+      <div className="section-label">{lang === "sr" ? "Jezik" : "Language"}</div>
       <div style={{ margin: "0 16px", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "14px 16px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[{ code: "sr", label: "🇷🇸 Srpski" }, { code: "en", label: "🇬🇧 English" }].map(l => {
@@ -572,23 +924,23 @@ function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, save
       </div>
 
       {/* CILJEVI */}
-      <div className="section-label">Ciljevi</div>
+      <div className="section-label">{lang === "sr" ? "Ciljevi" : "Goals"}</div>
       <div style={{ margin: "0 16px" }}>
-        <GoalsSystem savedData={savedData} accent={accent} lang={lang} />
+        <GoalsSystem savedData={savedData} accent={accent} lang={lang} goals={goals} onGoalsChange={setGoals} />
       </div>
 
       {/* PODSETNICI */}
-      <div className="section-label">Podsetnici</div>
+      <div className="section-label">{lang === "sr" ? "Podsetnici" : "Reminders"}</div>
       <div style={{ margin: "0 16px" }}>
-        <RemindersPanel savedData={savedData} accent={accent} />
+        <RemindersPanel savedData={savedData} accent={accent} lang={lang} />
       </div>
 
       {/* STATISTIKA */}
-      <div className="section-label">Statistika</div>
+      <div className="section-label">{lang === "sr" ? "Statistika" : "Statistics"}</div>
       <div style={{ margin: "0 16px", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "14px 16px" }}>
         {[
-          { label: "Ukupno treninga", val: savedData.length },
-          { label: "Ukupno XP",       val: xp.toLocaleString() },
+          { label: lang === "sr" ? "Ukupno treninga" : "Total workouts", val: savedData.length },
+          { label: lang === "sr" ? "Ukupno XP"       : "Total XP",       val: xp.toLocaleString() },
           { label: "Tier",            val: tier.tierName },
         ].map((s, i, arr) => (
           <div key={s.label} style={{
@@ -601,12 +953,13 @@ function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, save
           </div>
         ))}
       </div>
+      </>)}
     </div>
   );
 }
 
 // ── Exercise Card ─────────────────────────────────────────
-const ExerciseCard = React.memo(({ exId, exName, exIndex, value, onChange, pr, onRemove }) => {
+const ExerciseCard = React.memo(({ exId, exName, exIndex, value, onChange, pr, onRemove, lang = "sr" }) => {
   const { hue, sat } = React.useContext(AccentCtx);
   const l     = EX_LIGHTNESS_ROLES[exIndex % EX_LIGHTNESS_ROLES.length];
   const color = hsl(hue, sat, l);
@@ -654,7 +1007,7 @@ const ExerciseCard = React.memo(({ exId, exName, exIndex, value, onChange, pr, o
             <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}>{exName}</div>
             {pr > 0 && (
               <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 1 }}>
-                🏆 PR: <span style={{ color, fontWeight: 700 }}>{pr}</span>
+                🏆 PR: <span style={{ color, fontWeight: 700 }}>{pr}</span> {lang === "sr" ? "rep" : "reps"}
               </div>
             )}
           </div>
@@ -667,7 +1020,7 @@ const ExerciseCard = React.memo(({ exId, exName, exIndex, value, onChange, pr, o
                 background: "var(--surface-2)", borderRadius: "var(--radius-sm)",
                 padding: "7px 11px", textAlign: "center", minWidth: 54,
               }}>
-                <div style={{ fontSize: 9, color: "var(--text4)", marginBottom: 2, fontWeight: 700, textTransform: "uppercase" }}>{isHoldEx ? "Sekundi" : "Ukupno"}</div>
+                <div style={{ fontSize: 9, color: "var(--text4)", marginBottom: 2, fontWeight: 700, textTransform: "uppercase" }}>{isHoldEx ? (lang === "sr" ? "Sekundi" : "Seconds") : (lang === "sr" ? "Ukupno" : "Total")}</div>
                 <motion.div
                   key={total}
                   initial={{ scale: 1.25 }}
@@ -681,7 +1034,7 @@ const ExerciseCard = React.memo(({ exId, exName, exIndex, value, onChange, pr, o
                 background: "var(--surface-2)", borderRadius: "var(--radius-sm)",
                 padding: "7px 11px", textAlign: "center", minWidth: 54,
               }}>
-                <div style={{ fontSize: 9, color: "var(--text4)", marginBottom: 2, fontWeight: 700, textTransform: "uppercase" }}>Prosek</div>
+                <div style={{ fontSize: 9, color: "var(--text4)", marginBottom: 2, fontWeight: 700, textTransform: "uppercase" }}>{lang === "sr" ? "Prosek" : "Avg"}</div>
                 <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 800, color: "var(--text2)", lineHeight: 1 }}>{calcAvg(value)}</div>
               </div>
             </div>
@@ -743,7 +1096,9 @@ const ExerciseCard = React.memo(({ exId, exName, exIndex, value, onChange, pr, o
                 </motion.span>
               ))}
               <span style={{ color: "var(--text3)", fontSize: 12 }}>
-                {nums.length} {isHoldEx ? "set" : `serij${nums.length === 1 ? "a" : "e"}`}
+                {nums.length} {isHoldEx
+                ? (lang === "sr" ? "set" : `set${nums.length === 1 ? "" : "s"}`)
+                : (lang === "sr" ? `serij${nums.length === 1 ? "a" : "e"}` : `set${nums.length === 1 ? "" : "s"}`)}
                 {isHoldEx && <span style={{ color: "var(--text4)", marginLeft: 4 }}>· {total}s</span>}
               </span>
             </div>
@@ -779,7 +1134,7 @@ const HistoryEntry = React.memo(({ entry, lang, onDelete }) => {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
         <div>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}>{formatDate(entry.date)}</div>
-          <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>{exercises.length} vežbi · {totalReps} reps</div>
+          <div style={{ fontSize: 12, color: "var(--text3)", marginTop: 2 }}>{exercises.length} {lang === "sr" ? "vežbi" : "exercises"} · {totalReps} reps</div>
         </div>
         {!confirming
           ? <motion.button whileTap={{ scale: 0.9 }} onClick={() => setConfirming(true)}
@@ -843,6 +1198,7 @@ export default function App() {
   const [inputs,          setInputs]          = useState({});
   const [showSearch,      setShowSearch]       = useState(false);
   const [savedData,       setSavedData]        = useState(() => loadData());
+  const [goals,           setGoals]            = useState(() => { try { return JSON.parse(localStorage.getItem("fitpulse_goals") || "{}"); } catch { return {}; } });
   const [recentIds,       setRecentIds]        = useState(() => loadRecentExercises());
   const [selectedExId,    setSelectedExId]     = useState(null);
   const [prs,             setPRs]              = useState([]);
@@ -850,7 +1206,7 @@ export default function App() {
   const [saveFlash,       setSaveFlash]        = useState(false);
   const [showShareCard,   setShowShareCard]    = useState(false);
   const [prevTierId,      setPrevTierId]       = useState(() => {
-    try { return localStorage.getItem("fitpulse_prev_tier") || "bronze"; } catch { return "bronze"; }
+    try { return localStorage.getItem("fitpulse_prev_tier") || null; } catch { return null; }
   });
   const [newAchievements, setNewAchievements]  = useState([]);
   const [rankUpMuscleIds, setRankUpMuscleIds]  = useState([]);
@@ -890,7 +1246,8 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-save sa debounce 400ms
+  // Auto-save draft sa debounce 400ms — uvek aktivan, i tokom sesije
+  // Osigurava da se podaci ne izgube ako se app zatvori tokom session moda
   useEffect(() => {
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     draftTimerRef.current = setTimeout(() => {
@@ -967,11 +1324,13 @@ export default function App() {
       if (prev[ex.id] !== undefined) return prev; // vežba već postoji u sesiji, ne diraj
       return { ...prev, [ex.id]: "" }; // nova vežba — uvek počinje prazna
     });
-    setShowDraftBanner(false);
+    // Only dismiss the draft banner when we're NOT in session mode
+    // (in session mode the banner is behind the overlay and irrelevant)
+    if (!sessionMode) setShowDraftBanner(false);
     setShowSearch(false); haptic([10, 5, 10]);
     const updated = [ex.id, ...recentIds.filter(id => id !== ex.id)].slice(0, 10);
     setRecentIds(updated); saveRecentExercises(updated);
-  }, [lang, recentIds]);
+  }, [lang, recentIds, sessionMode]);
 
   const removeExercise = useCallback((exId) => {
     setActiveExercises(prev => prev.filter(e => e.id !== exId));
@@ -982,12 +1341,6 @@ export default function App() {
   const setInput = useCallback((exId, val) => setInputs(prev => ({ ...prev, [exId]: val })), []);
 
   // ── Smart prefill: get last sets for an exercise ──────────
-  const getSmartPrefill = useCallback((exId) => {
-    const lastWorkout = savedData.find(w => w.exercises[exId]?.raw);
-    if (!lastWorkout) return "";
-    return lastWorkout.exercises[exId]?.raw || "";
-  }, [savedData]);
-
   const saveWorkout = (sessionInfo = null) => {
     const anyInput = activeExercises.some(e => inputs[e.id]?.trim());
     if (!anyInput) return null;
@@ -1014,7 +1367,10 @@ export default function App() {
     setInputs(Object.fromEntries(activeExercises.map(e => [e.id, ""])));
     clearDraft();
     setSaveFlash(true); setTimeout(() => setSaveFlash(false), 900);
+    // ── Toast staggering — sve notifikacije idu sekvencijalno da ne bi flood-ovale ──
+    // Redosled: save (odmah) → achievements (1.2s) → muscle rank-ups (2.0s+) → PR celebration (2.5s)
     pushToast(makeSaveToast(workout, accent, lang));
+
     const streakNow = computeStreak(nextData).current;
     const unlocked = checkAchievements(nextData, streakNow);
     const prevSet = new Set(loadUnlockedAchievements());
@@ -1022,12 +1378,17 @@ export default function App() {
     const freshAchievements = [];
     if (fresh.length) {
       saveUnlockedAchievements(unlocked);
-      fresh.forEach(id => {
+      fresh.forEach((id, i) => {
         const a = ACHIEVEMENTS.find(x => x.id === id);
-        if (a) { pushToast(makeAchievementToast(a, accent)); freshAchievements.push(a); }
+        if (a) {
+          // Achievements idu sa razmakom od 1200ms da ne pucaju sve odjednom
+          setTimeout(() => pushToast(makeAchievementToast(a, accent)), 1200 + i * 900);
+          freshAchievements.push(a);
+        }
       });
     }
-    if (newPRs.length) setTimeout(() => setPRs(newPRs), 600);
+    // PR celebration kasni za sve toastove
+    if (newPRs.length) setTimeout(() => setPRs(newPRs), 800);
 
     // ── Muscle XP ────────────────────────────────────────────
     let muscleXPGains = {}, sessionRankUps = [];
@@ -1042,10 +1403,12 @@ export default function App() {
         const ids = rankUps.map(ru => ru.muscleId);
         setRankUpMuscleIds(ids);
         setTimeout(() => setRankUpMuscleIds([]), 2500);
+        // Muscle rank-up toastovi idu posle achievement toastova
+        const achievementDelay = fresh.length > 0 ? 1200 + fresh.length * 900 : 0;
         rankUps.forEach((ru, i) => {
           setTimeout(() => {
             pushToast(makeMuscleRankUpToast(ru.muscleId, ru.newRank, accent));
-          }, 800 + i * 600);
+          }, achievementDelay + 600 + i * 800);
         });
       }
     } catch (e) {
@@ -1053,11 +1416,21 @@ export default function App() {
     }
 
     // Return summary data for SessionMode
-    return { workout, newPRs, newAchievements: freshAchievements, muscleXPGains, rankUps: sessionRankUps };
+    return { workout, newPRs, newAchievements: freshAchievements, muscleXPGains, rankUps: sessionRankUps, updatedSavedData: nextData };
   };
 
   const deleteWorkout = useCallback((id) => {
-    haptic([10, 5, 10]); setSavedData(prev => prev.filter(w => w.id !== id));
+    haptic([10, 5, 10]);
+    setSavedData(prev => {
+      const updated = prev.filter(w => w.id !== id);
+      try {
+        const recalculated = migrateFromHistory(updated);
+        saveMuscleXP(recalculated);
+      } catch (e) {
+        console.warn("Muscle XP recalc after delete failed:", e);
+      }
+      return updated;
+    });
   }, []);
 
   const allExIds = useMemo(() => {
@@ -1065,9 +1438,16 @@ export default function App() {
     return [...ids];
   }, [savedData]);
 
+  // Fix 3: reset selectedExId when the exercise disappears from data (e.g. after deleting all workouts for it)
+  useEffect(() => {
+    if (selectedExId && allExIds.length > 0 && !allExIds.includes(selectedExId)) {
+      setSelectedExId(null);
+    }
+  }, [allExIds, selectedExId]);
+
   const getStats = (exId, days) => {
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
-    const filtered = savedData.filter(w => new Date(w.date) >= cutoff && (w.exercises[exId]?.total||0) > 0);
+    const cutoff = localDateStr(new Date(Date.now() - days * 86400000));
+    const filtered = savedData.filter(w => w.date >= cutoff && (w.exercises[exId]?.total||0) > 0);
     if (!filtered.length) return { avg: 0, sessions: 0 };
     return {
       avg: (filtered.reduce((s,w) => s + Number(w.exercises[exId]?.total||0), 0) / filtered.length).toFixed(1),
@@ -1078,12 +1458,14 @@ export default function App() {
   const getChartData = (exId) =>
     [...savedData].reverse().slice(-12).map(w => ({ date: w.date.slice(5), total: Number(w.exercises[exId]?.total||0) }));
 
-  const getOverviewData = () =>
+  // Fix 4: memoize getOverviewData — was called 3× per render in Stats tab
+  const overviewData = useMemo(() =>
     allExIds.map((id, i) => {
       const ex = getExerciseById(id); const pr = getPR(id); if (!pr) return null;
       const dbIdx = EXERCISE_DB.findIndex(e => e.id === id);
       return { name: (ex ? (lang==="sr" ? ex.sr : ex.en) : id).slice(0,8), fullName: ex ? (lang==="sr" ? ex.sr : ex.en) : id, pr, id, colorIdx: dbIdx >= 0 ? dbIdx : i };
-    }).filter(Boolean);
+    }).filter(Boolean),
+  [allExIds, savedData, lang]);
 
   const { current: streak, atRisk, longest: longestStreak, comebackBonus } = useMemo(() => computeStreak(savedData), [savedData]);
   const hasAnyInput  = activeExercises.some(e => inputs[e.id]?.trim());
@@ -1136,8 +1518,18 @@ export default function App() {
   }, [comebackBonus, accent, pushToast]);
 
   // Tier upgrade detection
+  const tierInitRef = React.useRef(false);
   useEffect(() => {
     const current = tierData.tier.id;
+    if (!tierInitRef.current) {
+      // First render: just record current tier, never show ShareCard
+      tierInitRef.current = true;
+      if (!prevTierId) {
+        try { localStorage.setItem("fitpulse_prev_tier", current); } catch {}
+        setPrevTierId(current);
+      }
+      return;
+    }
     if (prevTierId && prevTierId !== current) {
       try { localStorage.setItem("fitpulse_prev_tier", current); } catch {}
       setPrevTierId(current);
@@ -1215,12 +1607,14 @@ export default function App() {
                 <DashboardHero
                   savedData={savedData} accent={accent}
                   streak={streak} atRisk={atRisk}
+                  goals={goals}
+                  lang={lang}
                   onAddWorkout={() => { setShowSearch(true); haptic([5]); }}
                   onTierClick={() => setTabState("tier")}
                 />
 
                 <div style={{ padding: "10px 16px 8px" }}>
-                  <StreakBanner savedData={savedData} accent={accent} />
+                  <StreakBanner savedData={savedData} accent={accent} current={streak} longest={longestStreak} atRisk={atRisk} />
                   <WeeklyRecap savedData={savedData} accent={accent} lang={lang} />
 
                   {/* ── Draft banner ── */}
@@ -1319,6 +1713,7 @@ export default function App() {
                           onChange={val => setInput(ex.id, val)}
                           pr={getPR(ex.id)}
                           onRemove={removeExercise}
+                          lang={lang}
                         />
                       );
                     })}
@@ -1424,22 +1819,22 @@ export default function App() {
                 {statsLoading ? <StatsSkel /> : savedData.length === 0
                   ? EMPTY_STATS(lang, () => setTab("log"))
                   : (<>
-                    {getOverviewData().length > 0 && (
+                    {overviewData.length > 0 && (
                       <div style={{ background: "var(--surface-1)", borderRadius: "var(--radius-lg)", padding: 16, marginBottom: 16, border: "1px solid var(--border)" }}>
-                        <div style={{ fontSize: 10, color: "var(--text3)", marginBottom: 4, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em" }}>Personal Records</div>
+                        <div style={{ fontSize: 10, color: "var(--text3)", marginBottom: 4, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em" }}>{lang === "sr" ? "Lični Rekordi" : "Personal Records"}</div>
                         <ResponsiveContainer width="100%" height={160}>
-                          <BarChart data={getOverviewData()} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                          <BarChart data={overviewData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border2)" vertical={false} />
                             <XAxis dataKey="name" stroke="var(--text4)" tick={{ fontSize: 11 }} />
                             <YAxis stroke="var(--text4)" tick={{ fontSize: 10 }} />
                             <Tooltip content={({ active, payload }) => active && payload?.length ? (
                               <div style={{ background: "var(--surface-elevated)", border: "1px solid var(--border2)", borderRadius: "var(--radius-sm)", padding: "8px 14px", fontSize: 13 }}>
                                 <p style={{ color: "var(--text3)", margin: "0 0 4px" }}>{payload[0].payload.fullName}</p>
-                                <p style={{ color: payload[0].fill, margin: 0, fontWeight: 700 }}>PR: {payload[0].value} reps</p>
+                                <p style={{ color: payload[0].fill, margin: 0, fontWeight: 700 }}>PR: {payload[0].value} {lang === "sr" ? "rep" : "reps"}</p>
                               </div>) : null}
                             />
                             <Bar dataKey="pr" radius={[6, 6, 0, 0]}>
-                              {getOverviewData().map(e => <Cell key={e.id} fill={hsl(hue, sat, EX_LIGHTNESS_ROLES[e.colorIdx % EX_LIGHTNESS_ROLES.length])} />)}
+                              {overviewData.map(e => <Cell key={e.id} fill={hsl(hue, sat, EX_LIGHTNESS_ROLES[e.colorIdx % EX_LIGHTNESS_ROLES.length])} />)}
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
@@ -1487,9 +1882,9 @@ export default function App() {
                       return (<>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
                           {[
-                            { label: lang==="sr" ? "7 dana" : "7 days", val: w7.avg, sub: `${w7.sessions} sesija` },
-                            { label: lang==="sr" ? "30 dana" : "30 days", val: m.avg, sub: `${m.sessions} sesija` },
-                            { label: "PR", val: pr, sub: "reps" },
+                            { label: lang==="sr" ? "7 dana" : "7 days", val: w7.avg, sub: `${w7.sessions} ${lang==="sr" ? "sesija" : "sessions"}` },
+                            { label: lang==="sr" ? "30 dana" : "30 days", val: m.avg, sub: `${m.sessions} ${lang==="sr" ? "sesija" : "sessions"}` },
+                            { label: "PR", val: pr, sub: lang === "sr" ? "rep" : "reps" },
                           ].map(s => (
                             <div key={s.label} className="stat-chip">
                               <div className="stat-chip-label">{s.label}</div>
@@ -1539,9 +1934,12 @@ export default function App() {
                           {lang==="sr" ? "Istorija" : "History"}
                         </div>
                         <AnimatePresence>
-                          {savedData.slice(0, 10).map(entry => (
-                            <HistoryEntry key={entry.id} entry={entry} lang={lang} onDelete={deleteWorkout} />
-                          ))}
+                          {savedData
+                            .filter(entry => (entry.exercises[statsExId]?.total || 0) > 0)
+                            .slice(0, 10)
+                            .map(entry => (
+                              <HistoryEntry key={entry.id} entry={entry} lang={lang} onDelete={deleteWorkout} />
+                            ))}
                         </AnimatePresence>
                       </>);
                     })()}
@@ -1553,7 +1951,7 @@ export default function App() {
             {/* ── CALENDAR TAB ── */}
             {tab === "cal" && (
               <motion.div key="cal" {...PAGE_ANIM} style={{ paddingTop: 16 }}>
-                <CalendarView savedData={savedData} accent={accent} />
+                <CalendarView savedData={savedData} accent={accent} lang={lang} />
               </motion.div>
             )}
 
@@ -1578,6 +1976,7 @@ export default function App() {
                   setAccent={setAccent} setIsDark={setIsDark}
                   lang={lang} setLang={setLang}
                   savedData={savedData}
+                  goals={goals} setGoals={setGoals}
                 />
               </motion.div>
             )}
@@ -1669,7 +2068,18 @@ export default function App() {
               onRemove={removeExercise}
               getPR={getPR}
               onSave={(sessionInfo) => saveWorkout(sessionInfo)}
-              onClose={() => setSessionMode(false)}
+              onClose={(hasData) => {
+                // hasData=true: korisnik izašao sa podacima — ne brišemo, draft ostaje
+                // hasData=false: nema podataka — sigurno brisanje
+                setSessionMode(false);
+                if (!hasData) {
+                  setActiveExercises([]);
+                  setInputs({});
+                  clearDraft();
+                }
+                // Ako hasData, activeExercises/inputs ostaju netaknuti —
+                // draft banner će se prikazati i podaci neće biti izgubljeni.
+              }}
               onAddExercise={() => { setShowSearch(true); }}
               accent={accent}
               lang={lang}

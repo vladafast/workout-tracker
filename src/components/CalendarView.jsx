@@ -1,11 +1,20 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getDaysInMonth, formatDate } from "../utils/helpers";
-import { getExerciseById } from "../utils/exerciseDatabase";
+import { getDaysInMonth, formatDate, localDateStr } from "../utils/helpers";
+import { hsl } from "../utils/theme";
+import { getExerciseById, EXERCISE_DB } from "../utils/exerciseDatabase";
 
-const WEEKDAYS = ["Po", "Ut", "Sr", "Če", "Pe", "Su", "Ne"];
+const WEEKDAYS = {
+  sr: ["Po", "Ut", "Sr", "Če", "Pe", "Su", "Ne"],
+  en: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+};
 
-export default function CalendarView({ savedData }) {
+export default function CalendarView({ savedData, accent = { hue: 245, sat: 72 }, lang = "sr" }) {
+  const { hue, sat } = accent;
+  const acColor  = hsl(hue, sat, 62);
+  const acLight  = hsl(hue, sat, 74);
+  const acBorder = hsl(hue, sat, 62, 0.5);
+  const acBg     = hsl(hue, sat, 62, 0.1);
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -15,7 +24,7 @@ export default function CalendarView({ savedData }) {
   savedData.forEach((w) => { workoutMap[w.date] = w; });
 
   const days = getDaysInMonth(viewYear, viewMonth);
-  const todayKey = today.toISOString().split("T")[0];
+  const todayKey = localDateStr(today);
 
   const monthName = new Date(viewYear, viewMonth, 1).toLocaleDateString("sr-RS", {
     month: "long",
@@ -88,7 +97,7 @@ export default function CalendarView({ savedData }) {
 
       {/* Weekday headers */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 8 }}>
-        {WEEKDAYS.map(d => (
+        {(WEEKDAYS[lang] || WEEKDAYS.sr).map(d => (
           <div key={d} style={{
             textAlign: "center",
             fontSize: 11,
@@ -121,23 +130,23 @@ export default function CalendarView({ savedData }) {
                 aspectRatio: "1",
                 borderRadius: 10,
                 border: isSelected
-                  ? "2px solid var(--indigo)"
+                  ? "2px solid " + acColor
                   : isToday
-                    ? "2px solid rgba(99,102,241,0.5)"
+                    ? "2px solid " + acBorder
                     : "1px solid transparent",
                 background: hasWorkout
                   ? "linear-gradient(135deg, rgba(34,197,94,0.25), rgba(16,185,129,0.15))"
                   : isMissed
                     ? "rgba(239,68,68,0.08)"
                     : isToday
-                      ? "rgba(99,102,241,0.1)"
+                      ? acBg
                       : "var(--surface)",
                 color: hasWorkout
                   ? "#86efac"
                   : isMissed
                     ? "#f87171"
                     : isToday
-                      ? "var(--indigo-light)"
+                      ? acLight
                       : isFuture
                         ? "var(--text4)"
                         : "var(--text2)",
@@ -246,7 +255,7 @@ export default function CalendarView({ savedData }) {
                     <div key={exId} style={{ background: `${color}15`, border: `1px solid ${color}33`, borderRadius: 10, padding: "8px 12px" }}>
                       <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 2 }}>{name}</div>
                       <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, color }}>{v.total}</div>
-                      <div style={{ fontSize: 10, color: "var(--text4)" }}>reps</div>
+                      <div style={{ fontSize: 10, color: "var(--text4)" }}>{EXERCISE_DB.find(e => e.id === exId)?.isHold ? "sek" : "reps"}</div>
                     </div>
                   );
                 })}
@@ -258,7 +267,7 @@ export default function CalendarView({ savedData }) {
                 fontSize: 14,
                 padding: "12px 0",
               }}>
-                {selectedDay > todayStr() ? "🔮 Budući dan" : "❌ Nema treninga ovog dana"}
+                {selectedDay > todayStr() ? (lang === "sr" ? "🔮 Budući dan" : "🔮 Future day") : (lang === "sr" ? "❌ Nema treninga ovog dana" : "❌ No workout this day")}
               </div>
             )}
           </motion.div>
@@ -268,6 +277,4 @@ export default function CalendarView({ savedData }) {
   );
 }
 
-function todayStr() {
-  return new Date().toISOString().split("T")[0];
-}
+

@@ -69,21 +69,21 @@ export default function PRCelebration({ prs, onDone, accent = { hue: 245, sat: 7
             </motion.div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {prs.map((pr, i) => {
-                const ex    = getExerciseById(pr.exercise);
-                const dbIdx = EXERCISE_DB.findIndex(e => e.id === pr.exercise);
+                const ex    = getExerciseById(pr.id);
+                const dbIdx = EXERCISE_DB.findIndex(e => e.id === pr.id);
                 const l     = EX_LIGHTNESS_ROLES[(dbIdx >= 0 ? dbIdx : i) % EX_LIGHTNESS_ROLES.length];
                 const col   = hsl(hue, sat, l);
                 return (
-                  <motion.div key={pr.exercise}
+                  <motion.div key={pr.id}
                     initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.5 + i * 0.1 }}
                     style={{ background: hsl(hue,sat,l,0.12), border: `1px solid ${hsl(hue,sat,l,0.35)}`, borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <i className="ti ti-activity" style={{ color: col, fontSize: 18 }} aria-hidden="true" />
-                      <span style={{ fontWeight: 600, fontSize: 15 }}>{ex?.sr || pr.exercise}</span>
+                      <span style={{ fontWeight: 600, fontSize: 15 }}>{ex?.sr || pr.id}</span>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div className="pr-glow" style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 800, color: col }}>{pr.value}</div>
+                      <div className="pr-glow" style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 800, color: col }}>{pr.now}</div>
                       {pr.prev > 0 && <div style={{ fontSize: 11, color: "var(--text3)" }}>bilo: {pr.prev}</div>}
                     </div>
                   </motion.div>

@@ -42,13 +42,31 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'motion': ['framer-motion'],
-          'charts': ['recharts'],
-          'confetti': ['canvas-confetti'],
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/framer-motion')) {
+            return 'motion';
+          }
+          // Recharts i njegove zavisnosti (d3 i sl.) idu u poseban chunk
+          // koji se učitava samo kad korisnik ode na Stats tab
+          if (
+            id.includes('node_modules/recharts') ||
+            id.includes('node_modules/d3') ||
+            id.includes('node_modules/victory') ||
+            id.includes('node_modules/internmap') ||
+            id.includes('node_modules/robust-predicates')
+          ) {
+            return 'charts';
+          }
+          if (id.includes('node_modules/canvas-confetti')) {
+            return 'confetti';
+          }
         }
       }
-    }
+    },
+    // Podignuti warning limit ili ga ugasiti jer recharts je inherentno velik
+    chunkSizeWarningLimit: 600,
   }
 })

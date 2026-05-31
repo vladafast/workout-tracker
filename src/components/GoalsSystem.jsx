@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { loadGoals, saveGoals, haptic, todayStr } from "../utils/helpers";
+import { saveGoals, haptic, todayStr, localDateStr } from "../utils/helpers";
 import { EXERCISE_DB, getExerciseById } from "../utils/exerciseDatabase";
 import { hsl } from "../utils/theme";
 
@@ -115,8 +115,7 @@ function GoalCard({ goalKey, target, actual, exName, period, color, onEdit, onDe
 const PERIOD_LABELS = { daily: "Dnevno", weekly: "Nedeljno", monthly: "Mesečno" };
 const PERIOD_DAYS   = { daily: 0, weekly: 7, monthly: 30 };
 
-export default function GoalsSystem({ savedData, accent = { hue: 245, sat: 72 }, lang = "sr" }) {
-  const [goals,   setGoals]   = useState(() => loadGoals());
+export default function GoalsSystem({ savedData, accent = { hue: 245, sat: 72 }, lang = "sr", goals, onGoalsChange }) {
   const [period,  setPeriod]  = useState("weekly");
   const [editing, setEditing] = useState(null);
   const [editVal, setEditVal] = useState("");
@@ -129,8 +128,8 @@ export default function GoalsSystem({ savedData, accent = { hue: 245, sat: 72 },
   const acBd = hsl(hue, sat, 62, 0.25);
 
   const today    = todayStr();
-  const weekAgo  = new Date(Date.now() - 7  * 86400000).toISOString().split("T")[0];
-  const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+  const weekAgo  = localDateStr(new Date(Date.now() - 7  * 86400000));
+  const monthAgo = localDateStr(new Date(Date.now() - 30 * 86400000));
 
   const getActual = (exId) => {
     const cutoff = period === "daily" ? today : period === "weekly" ? weekAgo : monthAgo;
@@ -140,7 +139,7 @@ export default function GoalsSystem({ savedData, accent = { hue: 245, sat: 72 },
   const goalKey = (exId) => `${period}_${exId}`;
 
   const activeGoals = useMemo(() =>
-    Object.entries(goals)
+    Object.entries(goals || {})
       .filter(([k]) => k.startsWith(period + "_"))
       .map(([k, target]) => {
         const exId = k.slice(period.length + 1);
@@ -155,9 +154,9 @@ export default function GoalsSystem({ savedData, accent = { hue: 245, sat: 72 },
   const setGoal = (exId, val) => {
     const n = parseInt(val);
     if (!n || n < 1) return;
-    const updated = { ...goals, [goalKey(exId)]: n };
-    setGoals(updated);
+    const updated = { ...(goals || {}), [goalKey(exId)]: n };
     saveGoals(updated);
+    onGoalsChange?.(updated);
     setEditing(null);
     setAdding(false);
     setSearch("");
@@ -165,15 +164,15 @@ export default function GoalsSystem({ savedData, accent = { hue: 245, sat: 72 },
   };
 
   const removeGoal = (key) => {
-    const updated = { ...goals };
+    const updated = { ...(goals || {}) };
     delete updated[key];
-    setGoals(updated);
     saveGoals(updated);
+    onGoalsChange?.(updated);
     haptic([8]);
   };
 
   // Exercises not yet in goals for this period
-  const availableEx = EXERCISE_DB.filter(ex => !goals[goalKey(ex.id)] && (
+  const availableEx = EXERCISE_DB.filter(ex => !(goals || {})[goalKey(ex.id)] && (
     search === "" || (lang === "sr" ? ex.sr : ex.en).toLowerCase().includes(search.toLowerCase())
   )).slice(0, 8);
 

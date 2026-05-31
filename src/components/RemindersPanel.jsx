@@ -116,7 +116,7 @@ export default function RemindersPanel({ savedData }) {
           <span style={{ fontSize: 24 }}>⏰</span>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Vreme treninga</div>
-            <div style={{ fontSize: 12, color: "var(--text3)" }}>Dnevni podsetnik</div>
+            <div style={{ fontSize: 12, color: "var(--text3)" }}>Preferirano vreme (test notifikacija)</div>
           </div>
         </div>
 
@@ -214,7 +214,7 @@ export default function RemindersPanel({ savedData }) {
 
       {/* Streak at risk banner */}
       <AnimatePresence>
-        {atRisk && current > 2 && (
+        {atRisk && current > 2 && settings.streakWarning && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -250,7 +250,7 @@ export default function RemindersPanel({ savedData }) {
         padding: 14,
       }}>
         <div style={{ fontSize: 12, color: "var(--text3)", lineHeight: 1.6 }}>
-          💡 <strong style={{ color: "var(--text2)" }}>Napomena:</strong> Push notifikacije rade dok je browser otvoren. Za pouzdane podsetke, dodaj FitPulse na početni ekran (PWA).
+          💡 <strong style={{ color: "var(--text2)" }}>Napomena:</strong> Automatsko zakazivanje podsetnika nije podržano. Koristite test dugme za ručno slanje notifikacije. Za pouzdane podsetke, dodaj FitPulse na početni ekran (PWA).
         </div>
       </div>
 

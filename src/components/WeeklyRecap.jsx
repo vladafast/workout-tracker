@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-import { computeStreak } from "../utils/helpers";
+import { computeStreak, localDateStr} from "../utils/helpers";
 import { hsl } from "../utils/theme";
 
 /**
@@ -33,10 +33,12 @@ export default function WeeklyRecap({ savedData, accent = { hue: 245, sat: 72 },
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    const key = d.toISOString().split("T")[0];
+    const key = localDateStr(d);
     const count = savedData.filter(w => w.date === key).length;
-    const isToday = key === new Date().toISOString().split("T")[0];
-    return { label: ["Mo","Tu","We","Th","Fr","Sa","Su"][i], active: count > 0, isToday };
+    const isToday = key === localDateStr();
+    const srLabels = ["Po","Ut","Sr","Če","Pe","Su","Ne"];
+    const enLabels = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+    return { label: (lang === "sr" ? srLabels : enLabels)[i], active: count > 0, isToday };
   });
 
   const strongestDay = useMemo(() => {

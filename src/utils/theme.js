@@ -226,11 +226,8 @@ function applyDiminishing(rawXP) {
 export function workoutXP(workout, exerciseDB) {
   if (!workout?.exercises) return 0;
 
-  // lazy import fallback for when exerciseDB not passed
   let db = exerciseDB;
-  if (!db) {
-    try { db = require("./exerciseDatabase").EXERCISE_DB; } catch { return _legacyWorkoutXP(workout); }
-  }
+  if (!db) return _legacyWorkoutXP(workout); // exerciseDB must be passed in ESM context
 
   let rawXP = 0;
   Object.entries(workout.exercises).forEach(([exId, v]) => {
@@ -269,9 +266,7 @@ export function applyPRBonus(xp, hasPR) {
 export function calcXP(savedData, exerciseDB) {
   if (!savedData?.length) return 0;
   let db = exerciseDB;
-  if (!db) {
-    try { db = require("./exerciseDatabase").EXERCISE_DB; } catch {}
-  }
+  if (!db) return 0; // exerciseDB must be passed in ESM context
   return savedData.reduce((sum, w) => sum + workoutXP(w, db), 0);
 }
 
@@ -358,7 +353,7 @@ export const ACHIEVEMENTS = [
       let full = true;
       for (let j = 0; j < 7; j++) {
         const dt = new Date(base); dt.setDate(base.getDate()+j);
-        if (!days.has(dt.toISOString().split("T")[0])) { full=false; break; }
+        const pad = n => String(n).padStart(2,"0"); const dtKey = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`; if (!days.has(dtKey)) { full=false; break; }
       }
       if (full) return true;
     }
