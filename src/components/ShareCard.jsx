@@ -61,8 +61,8 @@ export default function ShareCard({
     tier: {
       headline: lang === "sr" ? `${tier.icon} ${tier.name} Tier!` : `${tier.icon} ${tier.name} Tier!`,
       body: lang === "sr"
-        ? `Dostigao sam ${tier.name} u FitPulse! 💪\n${xp.toLocaleString()} XP zaradjen.\n${totalReps.toLocaleString()} reps ukupno.`
-        : `Just hit ${tier.name} tier in FitPulse! 💪\n${xp.toLocaleString()} XP earned.\n${totalReps.toLocaleString()} total reps.`,
+        ? `Dostigao sam ${tier.name} u Fast Titan! 💪\n${xp.toLocaleString()} XP zaradjen.\n${totalReps.toLocaleString()} reps ukupno.`
+        : `Just hit ${tier.name} tier in Fast Titan! 💪\n${xp.toLocaleString()} XP earned.\n${totalReps.toLocaleString()} total reps.`,
       color:  tier.color,
       glow:   tier.glow,
       bg:     tier.bg,
@@ -76,8 +76,8 @@ export default function ShareCard({
     workout: {
       headline: lang === "sr" ? "Trening završen 💪" : "Workout done 💪",
       body: lang === "sr"
-        ? `${totalReps.toLocaleString()} ukupno reps. ${streak} dana niza.\n#FitPulse #Calisthenics`
-        : `${totalReps.toLocaleString()} total reps. ${streak} day streak.\n#FitPulse #Calisthenics`,
+        ? `${totalReps.toLocaleString()} ukupno reps. ${streak} dana niza.\n#Fast Titan #Calisthenics`
+        : `${totalReps.toLocaleString()} total reps. ${streak} day streak.\n#Fast Titan #Calisthenics`,
       color:  acL,
       glow:   hsl(hue, sat, 62, 0.35),
       bg:     `linear-gradient(135deg, ${hsl(hue,sat,60,0.12)}, transparent)`,
@@ -91,8 +91,8 @@ export default function ShareCard({
     streak: {
       headline: lang === "sr" ? `${streak} Dana Niza! 🔥` : `${streak} Day Streak! 🔥`,
       body: lang === "sr"
-        ? `${streak} dana konzistentnog treninga u FitPulse!\n${tier.icon} ${tier.name} tier.\n#Consistency #Calisthenics`
-        : `${streak} days of consistent training in FitPulse!\n${tier.icon} ${tier.name} tier.\n#Consistency #Calisthenics`,
+        ? `${streak} dana konzistentnog treninga u Fast Titan!\n${tier.icon} ${tier.name} tier.\n#Consistency #Calisthenics`
+        : `${streak} days of consistent training in Fast Titan!\n${tier.icon} ${tier.name} tier.\n#Consistency #Calisthenics`,
       color:  streak >= 30 ? "#ffd700" : streak >= 7 ? "#f97316" : "#ef4444",
       glow:   streak >= 30 ? "rgba(255,215,0,0.4)" : "rgba(249,115,22,0.4)",
       bg:     "linear-gradient(135deg, rgba(249,115,22,0.12), transparent)",
@@ -108,8 +108,8 @@ export default function ShareCard({
         ? `${latestAchievement.icon} ${latestAchievement.name}`
         : (lang === "sr" ? "Dostignuće otključano!" : "Achievement unlocked!"),
       body: latestAchievement
-        ? `${latestAchievement.desc}\n${tier.icon} ${tier.name} · FitPulse\n#Achievement #Calisthenics`
-        : `#FitPulse #Achievement`,
+        ? `${latestAchievement.desc}\n${tier.icon} ${tier.name} · Fast Titan\n#Achievement #Calisthenics`
+        : `#Fast Titan #Achievement`,
       color:  "#a855f7",
       glow:   "rgba(168,85,247,0.4)",
       bg:     "linear-gradient(135deg, rgba(168,85,247,0.12), transparent)",
@@ -125,9 +125,9 @@ export default function ShareCard({
   const card = cardContent[activeType];
 
   const handleShare = async () => {
-    const text = `${card.headline}\n\n${card.body}\n\n#FitPulse`;
+    const text = `${card.headline}\n\n${card.body}\n\n#Fast Titan`;
     if (navigator.share) {
-      try { await navigator.share({ text, title: "FitPulse" }); } catch {}
+      try { await navigator.share({ text, title: "Fast Titan" }); } catch {}
     } else {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -248,7 +248,7 @@ export default function ShareCard({
                   ))}
                 </div>
 
-                {/* FitPulse branding */}
+                {/* Fast Titan branding */}
                 <div style={{ fontSize: 11, color: "var(--text4)", fontFamily: "var(--font-display)", fontWeight: 700, letterSpacing: "0.1em" }}>
                   FITPULSE · KALISTENIK
                 </div>

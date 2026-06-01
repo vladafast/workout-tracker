@@ -78,7 +78,7 @@ export default function InstallPrompt() {
               color: "#e0e7ff",
               marginBottom: 2,
             }}>
-              Instaliraj FitPulse
+              Instaliraj Fast Titan
             </div>
             <div style={{ fontSize: 12, color: "rgba(165,180,252,0.6)" }}>
               Dodaj na početni ekran za brži pristup

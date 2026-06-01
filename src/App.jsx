@@ -467,6 +467,30 @@ function DashboardHero({ savedData, accent, streak, atRisk, onAddWorkout, onTier
   );
 }
 
+
+// ── NicknameInput — local state so typing never re-renders App ──
+function NicknameInput({ value, onCommit, lang, acBd }) {
+  const [local, setLocal] = React.useState(value);
+  // Sync if parent value changes (e.g. first load)
+  React.useEffect(() => { setLocal(value); }, [value]);
+  return (
+    <input
+      type="text"
+      value={local}
+      onChange={e => setLocal(e.target.value.slice(0, 24))}
+      onBlur={() => onCommit(local)}
+      placeholder={lang === "sr" ? "Tvoj nickname..." : "Your nickname..."}
+      style={{
+        background: "none", border: "none", outline: "none",
+        fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 800,
+        color: "var(--text)", width: "100%",
+        borderBottom: `1.5px solid ${acBd}`,
+        paddingBottom: 2, marginBottom: 4,
+      }}
+    />
+  );
+}
+
 // ── Exercise Library (Više tab) ───────────────────────────
 function ExerciseLibrary({ lang, accent }) {
   const { hue, sat } = accent;
@@ -728,7 +752,7 @@ function ExerciseLibrary({ lang, accent }) {
 }
 
 // ── Settings Tab ──────────────────────────────────────────
-function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, savedData, goals, setGoals }) {
+function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, savedData, goals, setGoals, nickname, setNickname }) {
   const { hue, sat } = accent;
   const acL  = hsl(hue, sat, 72);
   const acBg = hsl(hue, sat, 62, 0.12);
@@ -826,9 +850,14 @@ function SettingsTab({ accent, isDark, setAccent, setIsDark, lang, setLang, save
           <div style={{ width: 54, height: 54, borderRadius: "var(--radius-md)", background: acBg, border: `2px solid ${acBd}`, display: "flex", alignItems: "center", justifyContent: "center", color: acL, fontSize: 26 }}>
             <i className="ti ti-user" aria-hidden="true" />
           </div>
-          <div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 800 }}>FitPulse</div>
-            <div style={{ fontSize: 13, color: acL, fontWeight: 700, marginTop: 2 }}>{tier.tierName} · {tier.xp.toLocaleString()} XP</div>
+          <div style={{ flex: 1 }}>
+            <NicknameInput
+              value={nickname}
+              onCommit={setNickname}
+              lang={lang}
+              acBd={acBd}
+            />
+            <div style={{ fontSize: 13, color: acL, fontWeight: 700 }}>{tier.tierName} · {tier.xp.toLocaleString()} XP</div>
           </div>
         </div>
       </div>
@@ -1199,6 +1228,8 @@ export default function App() {
   const [showSearch,      setShowSearch]       = useState(false);
   const [savedData,       setSavedData]        = useState(() => loadData());
   const [goals,           setGoals]            = useState(() => { try { return JSON.parse(localStorage.getItem("fitpulse_goals") || "{}"); } catch { return {}; } });
+  const [nickname,        setNicknameState]    = useState(() => { try { return localStorage.getItem("fasttitan_nickname") || ""; } catch { return ""; } });
+  const setNickname = (n) => { setNicknameState(n); try { localStorage.setItem("fasttitan_nickname", n); } catch {} };
   const [recentIds,       setRecentIds]        = useState(() => loadRecentExercises());
   const [selectedExId,    setSelectedExId]     = useState(null);
   const [prs,             setPRs]              = useState([]);
@@ -1562,10 +1593,8 @@ export default function App() {
               <h1 style={{
                 fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 800,
                 letterSpacing: -0.8, margin: 0, color: acL,
-              }}>FitPulse</h1>
-              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 1 }}>
-                {lang === "sr" ? "Kalistenic tracker" : "Calisthenics tracker"}
-              </div>
+              }}>Fast Titan</h1>
+
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               {streak > 0 && (
@@ -1962,6 +1991,7 @@ export default function App() {
                   savedData={savedData}
                   accent={accent}
                   lang={lang}
+                  nickname={nickname}
                   onShareOpen={() => setShowShareCard(true)}
                   rankUpMuscleIds={rankUpMuscleIds}
                 />
@@ -1977,6 +2007,7 @@ export default function App() {
                   lang={lang} setLang={setLang}
                   savedData={savedData}
                   goals={goals} setGoals={setGoals}
+                  nickname={nickname} setNickname={setNickname}
                 />
               </motion.div>
             )}

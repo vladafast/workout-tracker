@@ -256,7 +256,7 @@ function StatCard({ icon, val, label, sub, color }) {
   );
 }
 
-export default function TierProfile({ savedData, accent = { hue: 245, sat: 72 }, lang = "sr", onBack, onShareOpen, rankUpMuscleIds = [] }) {
+export default function TierProfile({ savedData, accent = { hue: 245, sat: 72 }, lang = "sr", nickname = "", onBack, onShareOpen, rankUpMuscleIds = [] }) {
   const [achCatFilter, setAchCatFilter] = useState("all");
   const [showLockedAch, setShowLockedAch] = useState(false);
   const [selectedTier, setSelectedTier]   = useState(null);
@@ -378,13 +378,23 @@ export default function TierProfile({ savedData, accent = { hue: 245, sat: 72 },
             <BicepsProgress progress={progress} tier={tier} size={148} />
           </div>
 
+          {/* Nickname */}
+          {nickname ? (
+            <div style={{
+              fontFamily: "var(--font-display)", fontWeight: 800,
+              fontSize: 22, color: "var(--text)", marginBottom: 4, lineHeight: 1.1,
+            }}>
+              {nickname}
+            </div>
+          ) : null}
+
           {/* Tier name */}
           <motion.div
             animate={{ textShadow: [`0 0 20px ${tierGlow}`, `0 0 40px ${tierGlow}`, `0 0 20px ${tierGlow}`] }}
             transition={{ duration: 2.5, repeat: Infinity }}
             style={{
               fontFamily: "var(--font-display)", fontWeight: 800,
-              fontSize: 34, color: tierColor, lineHeight: 1, marginBottom: 6,
+              fontSize: nickname ? 26 : 34, color: tierColor, lineHeight: 1, marginBottom: 6,
             }}
           >
             {tier.icon} {tier.name}

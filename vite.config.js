@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
-        name: 'FitPulse - Workout Tracker',
-        short_name: 'FitPulse',
+        name: 'Fast Titan - Workout Tracker',
+        short_name: 'Fast Titan',
         description: 'Your premium calisthenics training companion',
         theme_color: '#09090b',
         background_color: '#09090b',
